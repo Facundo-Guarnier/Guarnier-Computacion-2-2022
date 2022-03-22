@@ -20,12 +20,11 @@ parse.add_argument("-i", type=str)      #Hay que hacer un add por cada opcion.
 parse.add_argument("-o", type=str)
 args=parse.parse_args()
 
-print("El archovo", args.i, "se copió a", args.o)
-
-
 with open(args.i, 'r') as archivo1:
     mensaje = archivo1.read()
     with open(args.o, 'w') as archivo2:
         archivo2.write(mensaje)         #Si el archivo no existe, es creado.
 
 # "archivo1.close()"" no es necesaria por la utilizacion del "with open...""
+
+print("El archovo", args.i, "se copió a", args.o)
