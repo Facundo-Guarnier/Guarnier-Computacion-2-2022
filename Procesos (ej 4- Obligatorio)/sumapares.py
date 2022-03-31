@@ -52,10 +52,9 @@ def main():
     pid_padre = os.getpid()
 
     for i in range(args.n):
-        if pid_padre == os.getpid():    # Evita nietos
-            os.fork()
-            if pid_padre != os.getpid():    # Que el padre no haga la suma 
-                f_hijo(args.v)
+        os.fork()
+        if pid_padre != os.getpid():    # Que el padre no haga la suma 
+            f_hijo(args.v)
 
         os.wait()   #Espera a que el hijo termine para seguir con otro.
 
