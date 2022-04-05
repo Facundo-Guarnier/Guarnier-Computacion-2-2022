@@ -35,8 +35,7 @@
         32800 – 4658: 268943600
 
 """
-import argparse
-import os
+import argparse, os, time, random
 
 def main():
     try:
@@ -54,14 +53,17 @@ def main():
     for i in range(args.n):
         os.fork()
         if pid_padre != os.getpid():    # Que el padre no haga la suma 
-            f_hijo(args.v)
+            f_hijo(args.v, i)
+            
+        # os.wait()   #Espera a que el hijo termine para seguir con otro.
 
-        os.wait()   #Espera a que el hijo termine para seguir con otro.
+    # os.wait()   #Todos los hijos se ejecutarian a la vez y espera a que terminen todos pero de forma rara.
 
-    #os.wait()   #Todos los hijos se ejecutarian a la vez y espera a que terminen todos.
+    for i in range(args.n): #Espera a que termien n cantidad de hijos.
+        os.wait()
 
 
-def f_hijo(v):
+def f_hijo(v, i):
     suma = 0
     for x in range(os.getpid()):
             if x % 2 == 0:
@@ -74,7 +76,10 @@ def f_hijo(v):
 
     else:
         print("%d - %d: %d" % (os.getpid(),os.getppid(), suma))
+    print("Estoy esperando", i)
     
+    a = (1,2,3,4,5,6,7,8,9)
+    time.sleep(5 + random.choice(a))
     os._exit(0)      #Finaliza el hijo
 
 
