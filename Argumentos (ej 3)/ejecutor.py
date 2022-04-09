@@ -1,4 +1,4 @@
-#!/
+#!/usr/bin/python3
 """
     Basándose en estos ejemplos, escribir un programa que reciba por 
     argumentos de línea de comandos los siguientes modificadores:
@@ -42,8 +42,6 @@ def main():
     parser.add_argument("-l", type=str, required=True, help="log")
     args = parser.parse_args()
 
-
-#    with open('/home/facu/Desktop/salida.txt', 'a') as archivo_salida, open('/home/facu/Desktop/log.txt', 'a') as archivo_log:
     with open(args.o, 'a') as archivo_salida, open(args.l, 'a') as archivo_log:
         p = subprocess.Popen(args.c, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True,  universal_newlines=True)
         salida, error = p.communicate()
