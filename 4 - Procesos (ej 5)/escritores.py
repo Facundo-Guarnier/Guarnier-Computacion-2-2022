@@ -53,13 +53,15 @@
 
 import abc
 import argparse, time, os, subprocess, string
+from re import sub
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", type=int, required=True, help="Cantidad de procesos hijos.")
     parser.add_argument("-r", type=int, required=True, help="Repeticion.")
-    parser.add_argument("-f", type=str, required=True, help="Ruta del archivo.")
-    parser.add_argument("-v", equired=False, action='store_true', help="Activar modo verboso.")
+    parser.add_argument("-f", type=str, required=True, help="Ruta del archivo.") 
+    parser.add_argument("-v", required=False, action='store_true', help="Activar modo verboso.", default=False)
+
     args = parser.parse_args()
 
 
@@ -69,23 +71,40 @@ def main():
     for i in range(args.n):
 
         os.fork()
-        if pid_padre != os.getpid():    # Que el padre no haga la suma 
-            
-            escribir(args.v, args.f, abcd[i])
+        if pid_padre != os.getpid():    # Que el padre no escriba 
+            for x in range(args.r):
+                time.sleep(1)
+                escribir(args.v, args.f, abcd[i])
+            os._exit(0) 
+
 
     for i in range(args.n):     #Espera a que termien n cantidad de hijos.
         os.wait()
 
 
 
-def escribir(v,f):
+
+    with open(args.f, "a") as archivo:
+        archivo.write("\n")
+        archivo.flush()
+
+    texto = subprocess.Popen("cat "+args.f, shell=True,  universal_newlines=True)
+
+
+
+
+def escribir(v,f,letra):
     if v:
-        pass
-    else:
-        p = subprocess.Popen(, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True,  universal_newlines=True)
-        salida, error = p.communicate()
-        a = "."
-        
+        print("Proceso {} escribiendo letra '{}'".format(os.getpid(), letra))
+
+    with open(f, "a") as archivo:
+        archivo.write(letra)
+        archivo.flush()
+
+
+
+
+
 
 if __name__=='__main__':
     main()
