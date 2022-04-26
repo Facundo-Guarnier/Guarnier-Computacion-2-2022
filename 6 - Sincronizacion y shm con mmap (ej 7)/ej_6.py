@@ -1,4 +1,4 @@
-#!/usr/bin/python3.8
+#!/usr/bin/python3
 
 """
     Escribir un programa que reciba por argumento la 
@@ -37,25 +37,20 @@
 """
 import sys, os, mmap, argparse, signal
 
-
-
 def h1(pid, memoria):
-    print("Hijo 1:")
     for linea in sys.stdin:
         if linea == "bye\n":
             print("Terminando hijo 1.... :'(")
-            # os.kill(pid_h2, signal.SIGUSR2)             # Acá esta el problema, el h1 no conoce el h2
             os.kill(os.getppid(), signal.SIGUSR2)
             sys.exit(0)
 
         memoria.write(linea.encode())
         os.kill(os.getppid(), signal.SIGUSR1)
-        print("++++++++++++\n\n")
+
 
 
 def h2(pid):
     while True:
-        # Es el unico que acceder al path_file
         signal.signal(signal.SIGUSR1, handler_h2_1)
         signal.signal(signal.SIGUSR2, handler_h2_2)
         signal.pause()
@@ -78,19 +73,18 @@ def padre():
         signal.pause()
 
 def handler_padre_1(nro, frame):
-    print("Padre: ")
+
     print(memoria.read(1024).decode())
     memoria.seek(0)
     os.kill(pid_h2, signal.SIGUSR1)
-    print("++++++++++++\n\n")
+
 
 def handler_padre_2(nro, frame):
-    os.kill(pid_h2, signal.SIGUSR2)             #Esto no deberia estar acá
-    print("Terminando Padre.... :'(")
+    os.kill(pid_h2, signal.SIGUSR2)
+
     for _ in range(2):
         os.wait()
     sys.exit(0)
-
 
 
 
@@ -114,8 +108,3 @@ for i in range(2):
             h2(pid_h2)
 
 padre()
-
-
-# El h1 nunca sabrá el pid del h2 
-# ya que fue creado despues.
-# El padre deberia matar al h2.
