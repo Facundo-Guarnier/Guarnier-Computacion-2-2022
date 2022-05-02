@@ -36,7 +36,7 @@
 """
 import sys, os, mmap, argparse, signal
 
-def h1(pid, memoria):
+def h1(memoria):
     for linea in sys.stdin:
         if linea == "bye\n":
             print("Terminando hijo 1.... :'(")
@@ -47,7 +47,7 @@ def h1(pid, memoria):
         os.kill(os.getppid(), signal.SIGUSR1)
 
 
-def h2(pid):
+def h2():
     while True:
         signal.signal(signal.SIGUSR1, handler_h2_1)
         signal.signal(signal.SIGUSR2, handler_h2_2)
@@ -97,12 +97,12 @@ for i in range(2):
     if i == 0:
         pid_h1 = pid_hijo
         if pid_h1 == 0:
-            h1(pid_h1, memoria)
+            h1(memoria)
 
     elif i == 1:
         pid_h2 = pid_hijo
         if pid_h2 == 0:
-            h2(pid_h2)
+            h2()
 
 padre()
 
