@@ -14,8 +14,6 @@
 """
 import sys, multiprocessing
 
-from cupshelpers import Printer
-
 def leer(e,n):
     sys.stdin = open(0)
     for i in range(n):                  
@@ -35,7 +33,7 @@ def encriptacion(l,n):
 if __name__ == "__main__":
     p_lectura, p_escritura = multiprocessing.Pipe()
 
-    repeticion = 2      #No sabía cuantas lineas habia que leer jeje
+    repeticion = 5      #No sabía cuantas lineas habia que leer jeje
 
     h1 = multiprocessing.Process(target=leer, args=(p_escritura,repeticion))
     h2 = multiprocessing.Process(target=encriptacion, args=(p_lectura,repeticion))
