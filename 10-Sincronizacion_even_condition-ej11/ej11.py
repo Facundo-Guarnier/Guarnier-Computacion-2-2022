@@ -16,7 +16,7 @@ import argparse, threading, sys, queue, time
 
 def argumentos():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", type=str, required=True, help="path_file", )
+    parser.add_argument("-f", type=str, required=True, help="path_file")
     return parser.parse_args()
 
 
