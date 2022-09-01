@@ -13,7 +13,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
             if msg1 == "exit":
                 print("  Cliente {} saliendo...".format(self.client_address))
                 self.request.sendall(pickle.dumps("Saliendo..."))
-                # sock.close()    #Como cierro el socket
+                # sock.close()    #Como cierro el socket??
                 break
 
             else:
@@ -49,7 +49,7 @@ def argumentos():
 #         # print(texto)
 #         if texto == "server_close\n":
 #             print("Server cerrado")
-#             server.shutdown(0)
+#             server.shutdown()
 #             break
 
 

@@ -5,7 +5,6 @@ import socket, threading, os, pickle, subprocess, argparse
 def hilo(sock):
     print("  Hijo ID:", threading.get_native_id())
     while True:
-
         msg1 = sock.recv(10000)      #Recibe bits
         msg1 = pickle.loads(msg1)   #De bits a normal
 
@@ -19,6 +18,25 @@ def hilo(sock):
             msg2_diccionario = ejecutor(msg1)
             msg2_diccionario = pickle.dumps(msg2_diccionario)   #De normal a bits 
             sock.send(msg2_diccionario)
+
+
+def proceso(sock):
+    print("  Hijo ID:", os.getpid())
+    while True:
+        msg1 = sock.recv(10000)      #Recibe bits
+        msg1 = pickle.loads(msg1)   #De bits a normal
+
+        if msg1 == "exit":
+            print("  Cliente saliendo...")
+            sock.send(pickle.dumps("Saliendo..."))
+            sock.close()
+            break
+
+        else:
+            msg2_diccionario = ejecutor(msg1)
+            msg2_diccionario = pickle.dumps(msg2_diccionario)   #De normal a bits 
+            sock.send(msg2_diccionario)
+    os._exit(0) 
 
 
 def ejecutor(msg1):
@@ -53,6 +71,15 @@ def main():
 
     if args.c == "p": 
         print("+++++++++++++ Procesos ++++++++++++++")
+        pid_padre = os.getpid()
+        while True:
+            s2,addr = s.accept()
+            print("-------------------------------------")
+            print("  Nuevo cliente {}". format(addr))
+            os.fork()
+            if pid_padre != os.getpid():    
+                proceso(s2)
+
     elif args.c == "t":
         print("+++++++++++++++ Hilos +++++++++++++++")
         while True:
