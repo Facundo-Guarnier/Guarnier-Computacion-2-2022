@@ -41,7 +41,6 @@ def abrir_socket(args):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((host, port))
 
-
     print("Padre ID:", os.getpid())
     print("Server 'ON' <" + host + ": " + str(port) + ">")
     s.listen()
