@@ -28,7 +28,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
             else:
                 msg2_diccionario = ejecutor(msg1)
-                msg2_diccionario = pickle.dumps(msg2_diccionario)   #De normal a bits 
+                msg2_diccionario = pickle.dumps(msg2_diccionario)
                 self.request.sendall(msg2_diccionario)
 
 
@@ -85,8 +85,6 @@ def abrir_socket_hilos(d):
                 server.serve_forever()
 
 
-
-
 def main():
     args = argumentos()
     direcciones = []
@@ -106,7 +104,6 @@ def main():
             print("Server: ", d[4])
             threading.Thread(target=abrir_socket_hilos, args=(d,)).start()
             print("---------------------------------------")
-
 
 
 
