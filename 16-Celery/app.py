@@ -18,7 +18,7 @@
 # docker run --rm -p 6379:6379 redis       ->  Redis, cola de mensaje, BD
 # celery -A celery_task worker --loglevel=INFO -c4       -> Celery, toma las tarea en cola y las trabaja, se puede sincronizar con otros celerys para mayor disponibilidad ($ sync with celery@mr-arch)
 # pip install redis
-# Con .delay() me permite seguir ejecutando el codigo, pesar que el resultado no esté. No hay que esperar.
+# Con .delay() me permite seguir ejecutando el codigo, a pesar que el resultado no esté. No hay que esperar.
 # Con el .get() obtengo el resultado. Si éste aun no está disponible, me quedo esperandolo (no sigue la ejecucion)
 
 import argparse, time
