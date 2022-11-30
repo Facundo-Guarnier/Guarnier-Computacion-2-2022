@@ -2,39 +2,31 @@ import socket, threading, os, pickle, multiprocessing, argparse, queue, time
 
 # https://stackoverflow.com/questions/3991104/very-large-input-and-piping-using-subprocess-popen
 
-def conexion(sock, q1, q_dict):
-    # pickle.loads(msg)  bits -> Normal
-    # pickle.dumps(msg)  Normal -> bits
-    
-    print("  Hilo ID:", threading.get_native_id())
-    
 
-    dic = q_dict.get()
-    dic["nickname"] = "guarnold"
-    q_dict.put(dic)
-    
+# pickle.loads(msg)  bits -> Normal
+# pickle.dumps(msg)  Normal -> bits
+def conexion(sock, q1):   
+    print("  Hilo 'Conexion' ID:", threading.get_native_id())
     while True:
         msg1 = sock.recv(10000)      #Recibe bits
         msg1 = pickle.loads(msg1)   #De bits a normal
-        q1.put(msg1)
+        # q1.put(msg1)
         
         # print("q1:", q1)
         # print("get 1:", q1.get())
         # print("get 2:", q1.get())
         
 
-        # msg2 = "{}, tu mama".format(msg1)
-        # msg2 = pickle.dumps(msg2)   #De normal a bits 
-        # sock.send(msg2)
-        pass
+        msg2 = "{}, tu mama".format(msg1)
+        msg2 = pickle.dumps(msg2)   #De normal a bits 
+        sock.send(msg2)
 
 
 def argumentos():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", type=int, required=True, help="port")
+    parser.add_argument("-p", type=int, required=False, help="port", default=5000)
     # parser.add_argument("-c", type=str, required=True, help="concurrencia", choices=["p", "t"])
     return parser.parse_args()
-
 
 
 def abrir_socket(args):
@@ -51,39 +43,11 @@ def abrir_socket(args):
 
 
 
-def partida(s):
-    #! Hilo de partida     
-    while True:
-        threading.Thread(target=aceptar_cliente, args=(s,)).start()
+#! Hilo de partida     
+#! Acá tiene que leer el diccionario y cada 2 en estado de espera crear una partida 
+def partida():
+    pass
 
-
-
-def aceptar_cliente(s, q_dict):
-    while True:
-        s2,addr = s.accept()
-        q1 = queue.Queue(maxsize=1)
-        
-        dic = {
-            "s2": s2,
-            "q1": q1,
-        }
-        q_dict.put(dic)
-        
-        print("-------------------------------------")
-        print("  Nuevo cliente {}". format(addr))
-        print("  Proceso padre ID:", os.getpid())
-        threading.Thread(target=conexion, args=(s2, q1, q_dict)).start()
-
-
-
-#! Acá tiene que agregar al diccionario las conexiones
-def partidas(s):
-    
-    q_dict = queue.Queue(maxsize=1)
-    threading.Thread(target=aceptar_cliente, args=(s, q_dict)).start()
-    
-    #! Acá tiene que leer el diccionario y cada 2 en estado de espera crear una partida 
-    threading.Thread(target=partida, args=(s)).start()
 
 
 
@@ -92,23 +56,72 @@ def base_datos():
     pass
 
 
+def aceptar_cliente(server):
+    while True:
+        s2,addr = server.accept()
+        print("-------------------------------------")
+        print("  Nuevo cliente {}". format(addr))
+        print("  Proceso padre ID:", os.getpid())
+        
+        q1 = queue.Queue(maxsize=1)
+        # nickname = s2.recv(10000)
+        # nickname = pickle.loads(nickname)
+        nickname = "Jugador" + str(addr[1])
+        
+        global clientes
+        clientes[nickname] = {
+            "s2": s2,
+            "q1": q1,
+            "jugando": False ,
+        }
+
+        threading.Thread(target=conexion, args=(s2, q1)).start()
+
+
+#! Acá tiene que agregar al diccionario las conexiones
+def online(server):
+    print("  Proceso 'Online' ID:", os.getpid())
+    candado = threading.Lock()  # Seccion critica
+    barrera = threading.Barrier(3)  #Es un punto de encuentro de 3 personas
+    q_dict = queue.Queue(maxsize=1)
+
+    global clientes
+    clientes = {}
+    
+    threading.Thread(target=aceptar_cliente, args=(server,)).start()
+
+    while len(clientes.keys()) < 2: 
+        print("++++++++++++++++++++ Esperando cliente nuevo ++++++++++++++++++++")
+        print("Clientes actuales:", len(clientes.keys()))
+        print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        time.sleep(5)
+    
+    
+    for clave in clientes.keys():
+        print("Clave:", clave)
+    
+    print("Clientes:", clientes)
+    
+    print("muriendo proceso...")
+    time.sleep(120)
+
+    # threading.Thread(target=partida, args=()).start()
+
 
 
 def main():
-    global clientes = {}
-
     args = argumentos()
-    s = abrir_socket(args)
+    server = abrir_socket(args)
     
     pid_padre = os.getpid()
     print("  Proceso main ID:", pid_padre)
 
-    #! Proceso de todas las partidas y jugadores
-    p_partidas = multiprocessing.Process(target=partidas, args=(s,))
+    #! Proceso de todas las partidas y clienets
+    p_partidas = multiprocessing.Process(target=online, args=(server,)).start()
 
     
     #! Proceso BD
-    p_bd = multiprocessing.Process(target=base_datos, args=())
+    # p_bd = multiprocessing.Process(target=base_datos, args=())
     
     # ...
     #! Proceso main del servidor 
@@ -117,3 +130,8 @@ def main():
     
 if __name__ == '__main__':
     main()
+
+
+
+#TODO Cambiar el diccionario cliente por una clase Cliente.
+#TODO ¿Como borrar un cliente que se desconectó con "ctrl + c"?

@@ -2,8 +2,8 @@ import socket, pickle, argparse
 
 def argumentos():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", type=int, required=True, help="port")
-    parser.add_argument("-d", required=True, help="direccion")
+    parser.add_argument("-p", type=int, required=False, help="port", default= 5000)
+    parser.add_argument("-d", required=False, help="direccion", default= "0.0.0.0")
     return parser.parse_args()
 
 
