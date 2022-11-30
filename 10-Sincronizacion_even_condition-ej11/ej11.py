@@ -29,7 +29,7 @@ def hilo1(queue2, event):
         event.wait()
         event.clear()
     
- 
+
 def hilo2(queue2, args, event):
     while True:
         archivo = open(args.f, "a")

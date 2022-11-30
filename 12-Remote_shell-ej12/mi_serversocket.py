@@ -118,7 +118,7 @@ def main():
     elif args.c == "t":
         print("++++++++++++++++ Hilos ++++++++++++++++")
         abrir_socket_hilos(args)
-  
+
 
 if __name__ == "__main__":    
     main()
