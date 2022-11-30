@@ -1,10 +1,6 @@
-clientes = {"AAA": "aaa"}
-claves = clientes.keys() 
+clientes = {"AAA": { "A": "a", "B": "b"}, "BBB": "bbb", "CCC": "ccc", "DDD": "ddd"}
 
+print(clientes[list(clientes.keys())[0]]["B"] )
 
-while len(clientes.keys()) < 2: 
-    print("pepe")
-    clientes = {"AAA": "aaa", "BBB": "bbb", "CCC": "ccc", "DDD": "ddd"}
-
-for clave in clientes.keys():
-    print(clave)
+# for clave in clientes.keys():
+#     print(clave)

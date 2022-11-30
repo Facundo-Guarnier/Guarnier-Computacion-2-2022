@@ -10,14 +10,16 @@ def conexion(sock, q1):
     while True:
         msg1 = sock.recv(10000)      #Recibe bits
         msg1 = pickle.loads(msg1)   #De bits a normal
-        # q1.put(msg1)
+        q1.put(msg1+", del j1")
         
         # print("q1:", q1)
         # print("get 1:", q1.get())
         # print("get 2:", q1.get())
         
-
-        msg2 = "{}, tu mama".format(msg1)
+        #TODO Problema: Ahora tengo que leer el q1 pero cuando el otro jugador me cambió el valor, si pongo ahora un .get voy a leer lo que puse mas recien.
+        # msg2 = q1.get()
+        
+        msg2 = "[RESPUESTA] {}".format(msg1)
         msg2 = pickle.dumps(msg2)   #De normal a bits 
         sock.send(msg2)
 
@@ -43,14 +45,6 @@ def abrir_socket(args):
 
 
 
-#! Hilo de partida     
-#! Acá tiene que leer el diccionario y cada 2 en estado de espera crear una partida 
-def partida():
-    pass
-
-
-
-
 #! Conexion con la BD
 def base_datos():
     pass
@@ -69,20 +63,45 @@ def aceptar_cliente(server):
         nickname = "Jugador" + str(addr[1])
         
         global clientes
+        #TODO Poner una seccion critica 
         clientes[nickname] = {
             "s2": s2,
             "q1": q1,
-            "jugando": False ,
+            "espera": True,
         }
 
         threading.Thread(target=conexion, args=(s2, q1)).start()
 
 
+#! Hilo de partida     
+#! Acá tiene que leer el diccionario y cada 2 en estado de espera crear una partida 
+def partida(jugadores):
+    print("  Hilo 'Partida' ID:", threading.get_native_id())
+
+    global clientes
+    q_jugador1 = jugadores[list(jugadores.keys())[0]]["q1"]
+    q_jugador2 = jugadores[list(jugadores.keys())[1]]["q1"]
+    
+    #TODO Estas en el problema de sincronizacion de turnos entre los 2 jugadores, ya que el queue de cada jugador no se vé con el del otro, 
+    #TODO por lo tanto abria que utilizar el mismo queue (q1) pero hay que avisar cuando puede leer  y cuando puede escribir. Para esto estas 
+    #TODO viendo la clase de EVENT. VER LA CLASE 2 de EVENT
+
+# { "Jugador5923":
+#     {
+#         "s2": s2,
+#         "q1": q1,
+#         "espera": True,
+#     }
+# }
+
+
 #! Acá tiene que agregar al diccionario las conexiones
 def online(server):
     print("  Proceso 'Online' ID:", os.getpid())
+    
     candado = threading.Lock()  # Seccion critica
     barrera = threading.Barrier(3)  #Es un punto de encuentro de 3 personas
+    
     q_dict = queue.Queue(maxsize=1)
 
     global clientes
@@ -91,21 +110,22 @@ def online(server):
     threading.Thread(target=aceptar_cliente, args=(server,)).start()
 
     while len(clientes.keys()) < 2: 
-        print("++++++++++++++++++++ Esperando cliente nuevo ++++++++++++++++++++")
-        print("Clientes actuales:", len(clientes.keys()))
-        print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        time.sleep(5)
-    
-    
-    for clave in clientes.keys():
-        print("Clave:", clave)
-    
-    print("Clientes:", clientes)
-    
-    print("muriendo proceso...")
-    time.sleep(120)
 
-    # threading.Thread(target=partida, args=()).start()
+        time.sleep(5)
+
+    while True:
+        jugadores_espera = {}
+        
+        for clave in clientes.keys():
+            if clientes[clave]["espera"]:
+                jugadores_espera[clave] = clientes[clave]
+        
+        if len(jugadores_espera) >= 2:
+            threading.Thread(target=partida, args=(jugadores_espera,)).start()
+        
+        else:
+            print("++++++++++++++++++++ Esperando jugador nuevo ++++++++++++++++++++")
+            time.sleep(3)
 
 
 
@@ -135,3 +155,4 @@ if __name__ == '__main__':
 
 #TODO Cambiar el diccionario cliente por una clase Cliente.
 #TODO ¿Como borrar un cliente que se desconectó con "ctrl + c"?
+#TODO Poner una seccion critica a las variables globales
