@@ -2,9 +2,9 @@ Juego de Batalla Naval:
 
 El servidor es el encargado de:
 	> Un nuevo proceso (multiprocessing) encargado de las conexiones y de las partidas.
-	> Establecer múltiples conexiones utilizando hilos del proceso anteriormente mencionado.
+	> Un hilo es encargado de establecer múltiples conexiones, cada una utilizando un hilo.
 	> Cada 2 jugadores/conexiones se crea un nuevo hilo para realizar una partida.
-	> Los 3 hilos relacionados para la partida se comunican via queue.
+	> Los 3 hilos relacionados para la partida se comunican via queue y event.
 	> Un nuevo proceso (multiprocessing) para utilizar una BD (almacenar resultado de los jugadores) mediante AsyncIO.
 	> La comunicacion entre los 2 procesos (de partida y de BD) es a travez de multiprocessing.Pipe() 
 

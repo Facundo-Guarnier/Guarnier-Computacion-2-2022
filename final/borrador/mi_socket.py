@@ -5,7 +5,7 @@ import socket, threading, os, pickle, multiprocessing, argparse, queue, time
 
 # pickle.loads(msg)  bits -> Normal
 # pickle.dumps(msg)  Normal -> bits
-def conexion(sock, q1):   
+def cliente(sock, q1):   
     print("  Hilo 'Conexion' ID:", threading.get_native_id())
     while True:
         msg1 = sock.recv(10000)      #Recibe bits
@@ -51,6 +51,7 @@ def base_datos():
 
 
 def aceptar_cliente(server):
+    print("  Hilo 'Aceptar_cliente' ID:", threading.get_native_id())
     while True:
         s2,addr = server.accept()
         print("-------------------------------------")
@@ -70,7 +71,7 @@ def aceptar_cliente(server):
             "espera": True,
         }
 
-        threading.Thread(target=conexion, args=(s2, q1)).start()
+        threading.Thread(target=cliente, args=(s2, q1)).start()
 
 
 #! Hilo de partida     
@@ -109,9 +110,6 @@ def online(server):
     
     threading.Thread(target=aceptar_cliente, args=(server,)).start()
 
-    while len(clientes.keys()) < 2: 
-
-        time.sleep(5)
 
     while True:
         jugadores_espera = {}
@@ -121,7 +119,8 @@ def online(server):
                 jugadores_espera[clave] = clientes[clave]
         
         if len(jugadores_espera) >= 2:
-            threading.Thread(target=partida, args=(jugadores_espera,)).start()
+            print("++++++++++++++++++++ Se pudo establecer una partida ++++++++++++++++++++")
+            # threading.Thread(target=partida, args=(jugadores_espera,)).start()
         
         else:
             print("++++++++++++++++++++ Esperando jugador nuevo ++++++++++++++++++++")
