@@ -5,23 +5,75 @@ import socket, threading, os, pickle, multiprocessing, argparse, queue, time
 
 # pickle.loads(msg)  bits -> Normal
 # pickle.dumps(msg)  Normal -> bits
-def cliente(sock, q1):   
+def cliente(sock, q1, e1, pe):   
     print("  Hilo 'Conexion' ID:", threading.get_native_id())
+
+    msg1 = sock.recv(10000)      #Recibe bits
+    msg1 = pickle.loads(msg1)   #De bits a normal
+
+    if "1" == msg1: 
+        msg2 = pickle.dumps("Sos el jugador 1")   #De normal a bits 
+        sock.send(msg2)
+        jugador1(sock, q1, e1, pe)
+        
+    elif "2" == msg1:
+        msg2 = pickle.dumps("Sos el jugador 2")   #De normal a bits 
+        sock.send(msg2)
+        jugador2(sock, q1, e1, pe)
+
+    else:
+        msg2 = pickle.dumps("No se que jugador sos, msg1: {} {}".format(msg1, type(msg1)))   #De normal a bits 
+        sock.send(msg2)
+        
+
+
+
+def jugador1(sock, q1, e1, pe):
     while True:
+        #! Desde acá deberia empezar el jugador1
         msg1 = sock.recv(10000)      #Recibe bits
         msg1 = pickle.loads(msg1)   #De bits a normal
+        
         q1.put(msg1+", del j1")
         
-        # print("q1:", q1)
-        # print("get 1:", q1.get())
-        # print("get 2:", q1.get())
+        pe.wait()
         
-        #TODO Problema: Ahora tengo que leer el q1 pero cuando el otro jugador me cambió el valor, si pongo ahora un .get voy a leer lo que puse mas recien.
-        # msg2 = q1.get()
         
-        msg2 = "[RESPUESTA] {}".format(msg1)
+        #! Desde acá deberia empezar el jugador2
+        e1.wait()
+        
+        msg2 = q1.get() #Mensaje desde el hilo 'Partida'
+        
+        e1.clear()
+        
         msg2 = pickle.dumps(msg2)   #De normal a bits 
         sock.send(msg2)
+        
+        pass
+
+
+def jugador2(sock, q1, e1, pe):
+    while True:
+        #! Desde acá deberia empezar el jugador2
+        e1.wait()
+        
+        msg2 = q1.get() #Mensaje desde el hilo 'Partida'
+        
+        e1.clear()
+        
+        msg2 = pickle.dumps(msg2)   #De normal a bits 
+        sock.send(msg2)
+        
+        #! Desde acá deberia empezar el jugador1
+        msg1 = sock.recv(10000)      #Recibe bits
+        msg1 = pickle.loads(msg1)   #De bits a normal
+        
+        q1.put(msg1+", del j2")
+        
+        pe.wait()
+        
+        pass
+
 
 
 def argumentos():
@@ -44,7 +96,6 @@ def abrir_socket(args):
     return s
 
 
-
 #! Conexion con la BD
 def base_datos():
     pass
@@ -59,23 +110,27 @@ def aceptar_cliente(server):
         print("  Proceso padre ID:", os.getpid())
         
         q1 = queue.Queue(maxsize=1)
+        e1 = threading.Event()      # Predeterminado es falso
+        pe = threading.Barrier(2)
         # nickname = s2.recv(10000)
         # nickname = pickle.loads(nickname)
         nickname = "Jugador" + str(addr[1])
+        
         
         global clientes
         #TODO Poner una seccion critica 
         clientes[nickname] = {
             "s2": s2,
             "q1": q1,
+            "e1": e1,
             "espera": True,
+            "pe": pe,
         }
 
-        threading.Thread(target=cliente, args=(s2, q1)).start()
+        threading.Thread(target=cliente, args=(s2, q1, e1, pe)).start()
 
 
 #! Hilo de partida     
-#! Acá tiene que leer el diccionario y cada 2 en estado de espera crear una partida 
 def partida(jugadores):
     print("  Hilo 'Partida' ID:", threading.get_native_id())
 
@@ -83,15 +138,89 @@ def partida(jugadores):
     q_jugador1 = jugadores[list(jugadores.keys())[0]]["q1"]
     q_jugador2 = jugadores[list(jugadores.keys())[1]]["q1"]
     
-    #TODO Estas en el problema de sincronizacion de turnos entre los 2 jugadores, ya que el queue de cada jugador no se vé con el del otro, 
-    #TODO por lo tanto abria que utilizar el mismo queue (q1) pero hay que avisar cuando puede leer  y cuando puede escribir. Para esto estas 
-    #TODO viendo la clase de EVENT. VER LA CLASE 2 de EVENT
+    e_jugador1 = jugadores[list(jugadores.keys())[0]]["e1"]
+    e_jugador2 = jugadores[list(jugadores.keys())[1]]["e1"]
+    
+    pe_jugador1 = jugadores[list(jugadores.keys())[0]]["pe"]
+    pe_jugador2 = jugadores[list(jugadores.keys())[1]]["pe"]
+    
+    
+    #! Siempre empieza el jugador 1. 
+    while True:
+        #T* ACÁ me quedé 
+        #* PROBLEMATICA: Productor consumidor pero es bidireccional o que cambiar de roll 
+        #* Se puede utilizar puntos de encuentro ya que son bidireccionales (los 2 amigos 
+        #* tienen que llegar a la plaza, no importa si A llega primero y luego B o viceversa)
+
+        #! Desde acá deberia empezar el jugador1
+        pe_jugador1.wait()
+        msg1 = q_jugador1.get()
+        
+        # ...
+        # Procesar el mensaje del primer jugador.
+        # ...
+        msg1 = msg1 + ", este mensaje fue procesado por el hilo 'Partida' :)"
+        q_jugador2.put(msg1)
+        e_jugador1.set()
+        
+        
+        #! Desde acá deberia empezar el jugador2
+        e_jugador2.set()
+        pe_jugador2.wait()
+        
+        msg1 = q_jugador2.get()
+        
+        # ...
+        # Procesar el mensaje del primer jugador.
+        # ...
+        msg1 = msg1 + ", este mensaje fue procesado por el hilo 'Partida' :)"
+        q_jugador1.put(msg1)
+        
+        pass
+        
+        
+        
+        
+        
+        # #! Codigo viejo
+        # msg1 = q_jugador1.get()
+        # # ...
+        # # Procesar el mensaje del primer jugador.
+        # # ...
+        # msg1 = msg1 + ", este mensaje fue procesado por el hilo 'Partida' :)"
+        
+        
+        # q_jugador2.put(msg1)
+
+
+        
+        # #! Fin del la jugada del jugador 1
+        # #! Comienzo de la jugada del jugador 2
+        # msg1 = q_jugador2.get()
+        # # ...
+        # # Procesar el mensaje del primer jugador.
+        # # ...
+        # msg1 = msg1 + ", este mensaje fue procesado por el hilo partida :)"
+        # e_jugador1.set()    #Avisa al jugador 1 que ya está listo para leer de su queue1.
+        
+        
+        # q_jugador2.put(msg1)
+        # q_jugador1.set() 
+        # #T* Hasta acá
+        
+    
+    
+    
+    
+
 
 # { "Jugador5923":
 #     {
 #         "s2": s2,
 #         "q1": q1,
+#         "e1": e1,
 #         "espera": True,
+#         "pe": pe
 #     }
 # }
 
@@ -100,9 +229,9 @@ def partida(jugadores):
 def online(server):
     print("  Proceso 'Online' ID:", os.getpid())
     
-    candado = threading.Lock()  # Seccion critica
+    semaforo = threading.Semaphore(3)   #Soporta 3 productos del productor (como si fuece un buffer de 3 o que mi recurso soporta 3 instancias)
+    candado = threading.Lock()  # Seccion critica, inicia en abierto (creo que es como un semanforo pero inicializado en 1), se suele trabajar con "with candado: ...".
     barrera = threading.Barrier(3)  #Es un punto de encuentro de 3 personas
-    
     q_dict = queue.Queue(maxsize=1)
 
     global clientes
@@ -110,20 +239,32 @@ def online(server):
     
     threading.Thread(target=aceptar_cliente, args=(server,)).start()
 
-
+    #! Acá tiene que leer el diccionario y cada 2 en estado de espera crear una partida 
     while True:
         jugadores_espera = {}
         
         for clave in clientes.keys():
             if clientes[clave]["espera"]:
                 jugadores_espera[clave] = clientes[clave]
+                
+                if len(jugadores_espera) >= 2:
+                    break
+                
         
         if len(jugadores_espera) >= 2:
             print("++++++++++++++++++++ Se pudo establecer una partida ++++++++++++++++++++")
-            # threading.Thread(target=partida, args=(jugadores_espera,)).start()
+            threading.Thread(target=partida, args=(jugadores_espera,)).start()
+            print("Jugadores en espera:", jugadores_espera)
+
+            for clave in jugadores_espera.keys():
+                clientes[clave]["espera"] = False
         
+            time.sleep(5)
+
         else:
             print("++++++++++++++++++++ Esperando jugador nuevo ++++++++++++++++++++")
+            print("  Total de jugadores:", len(clientes.keys()))
+            print("  Jugadores en espera:", len(jugadores_espera))
             time.sleep(3)
 
 
@@ -155,3 +296,7 @@ if __name__ == '__main__':
 #TODO Cambiar el diccionario cliente por una clase Cliente.
 #TODO ¿Como borrar un cliente que se desconectó con "ctrl + c"?
 #TODO Poner una seccion critica a las variables globales
+#TODO Ver como matar al proceso "online" cuando muere el main. Señal de ctrl + c para que tambien se la envíe al hijo. 
+#TODO Seccion critica??? En todo los lugares en que esté un q1 y e1.
+#TODO Ver si se puede con IPv4 y v6
+#TODO Estudiar las diferencias entre threading.Lock(), threading.RLock(), threading.Barrier(3), threading.Semaphore(), threading.BoundedSemaphore(), threading.Condition(), event y otros
