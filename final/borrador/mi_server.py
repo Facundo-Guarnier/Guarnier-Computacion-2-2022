@@ -1,4 +1,4 @@
-import socket, threading, os, pickle, multiprocessing, argparse, queue, time
+import socket, threading, os, pickle, multiprocessing, argparse, queue, time, signal
 
 # https://stackoverflow.com/questions/3991104/very-large-input-and-piping-using-subprocess-popen
 
@@ -8,23 +8,18 @@ import socket, threading, os, pickle, multiprocessing, argparse, queue, time
 def cliente(sock, q1, e1, pe):   
     print("  Hilo 'Conexion' ID:", threading.get_native_id())
 
-    msg1 = sock.recv(10000)      #Recibe bits
-    msg1 = pickle.loads(msg1)   #De bits a normal
+    jugador = q1.get()
 
-    if "1" == msg1: 
-        msg2 = pickle.dumps("Sos el jugador 1")   #De normal a bits 
+    if "1" == jugador: 
+        msg2 = pickle.dumps("Se encontró partida!! Sos el jugador 1")   #De normal a bits 
         sock.send(msg2)
         jugador1(sock, q1, e1, pe)
         
-    elif "2" == msg1:
-        msg2 = pickle.dumps("Sos el jugador 2")   #De normal a bits 
+    elif "2" == jugador:
+        msg2 = pickle.dumps("Se encontró partida!! Sos el jugador 2")   #De normal a bits 
         sock.send(msg2)
         jugador2(sock, q1, e1, pe)
 
-    else:
-        msg2 = pickle.dumps("No se que jugador sos, msg1: {} {}".format(msg1, type(msg1)))   #De normal a bits 
-        sock.send(msg2)
-        
 
 
 
@@ -71,6 +66,7 @@ def jugador2(sock, q1, e1, pe):
         q1.put(msg1+", del j2")
         
         pe.wait()
+        
         
         pass
 
@@ -145,12 +141,16 @@ def partida(jugadores):
     pe_jugador2 = jugadores[list(jugadores.keys())[1]]["pe"]
     
     
+    
+    #! Avisar a los jugadores que se encontró partida y quien es el jugador 1 y el 2.
+    q_jugador1.put("1")
+    q_jugador2.put("2")
+    
+    
+    
+    
     #! Siempre empieza el jugador 1. 
     while True:
-        #T* ACÁ me quedé 
-        #* PROBLEMATICA: Productor consumidor pero es bidireccional o que cambiar de roll 
-        #* Se puede utilizar puntos de encuentro ya que son bidireccionales (los 2 amigos 
-        #* tienen que llegar a la plaza, no importa si A llega primero y luego B o viceversa)
 
         #! Desde acá deberia empezar el jugador1
         pe_jugador1.wait()
@@ -177,52 +177,8 @@ def partida(jugadores):
         q_jugador1.put(msg1)
         
         pass
-        
-        
-        
-        
-        
-        # #! Codigo viejo
-        # msg1 = q_jugador1.get()
-        # # ...
-        # # Procesar el mensaje del primer jugador.
-        # # ...
-        # msg1 = msg1 + ", este mensaje fue procesado por el hilo 'Partida' :)"
-        
-        
-        # q_jugador2.put(msg1)
 
 
-        
-        # #! Fin del la jugada del jugador 1
-        # #! Comienzo de la jugada del jugador 2
-        # msg1 = q_jugador2.get()
-        # # ...
-        # # Procesar el mensaje del primer jugador.
-        # # ...
-        # msg1 = msg1 + ", este mensaje fue procesado por el hilo partida :)"
-        # e_jugador1.set()    #Avisa al jugador 1 que ya está listo para leer de su queue1.
-        
-        
-        # q_jugador2.put(msg1)
-        # q_jugador1.set() 
-        # #T* Hasta acá
-        
-    
-    
-    
-    
-
-
-# { "Jugador5923":
-#     {
-#         "s2": s2,
-#         "q1": q1,
-#         "e1": e1,
-#         "espera": True,
-#         "pe": pe
-#     }
-# }
 
 
 #! Acá tiene que agregar al diccionario las conexiones
@@ -249,7 +205,7 @@ def online(server):
                 
                 if len(jugadores_espera) >= 2:
                     break
-                
+        
         
         if len(jugadores_espera) >= 2:
             print("++++++++++++++++++++ Se pudo establecer una partida ++++++++++++++++++++")
@@ -268,6 +224,10 @@ def online(server):
             time.sleep(3)
 
 
+def señal(nro_senial, marco):
+    print("Finalizando el proceso ID:", os.getpid())
+    os._exit(0)
+
 
 def main():
     args = argumentos()
@@ -276,10 +236,11 @@ def main():
     pid_padre = os.getpid()
     print("  Proceso main ID:", pid_padre)
 
+    signal.signal(signal.SIGINT, señal)
+
     #! Proceso de todas las partidas y clienets
     p_partidas = multiprocessing.Process(target=online, args=(server,)).start()
 
-    
     #! Proceso BD
     # p_bd = multiprocessing.Process(target=base_datos, args=())
     
@@ -292,11 +253,12 @@ if __name__ == '__main__':
     main()
 
 
+#TODO:
+# Cambiar el diccionario cliente por una clase Cliente.
+# ¿Como borrar un cliente que se desconectó con "ctrl + c"?
+# Poner una seccion critica a las variables globales
+#//  Ver como matar al proceso "online" cuando muere el main. Señal de ctrl + c para que tambien se la envíe al hijo. 
+# Seccion critica??? En todo los lugares en que esté un q1 y e1.
+# Ver si se puede con IPv4 y v6
+# Estudiar las diferencias entre threading.Lock(), threading.RLock(), threading.Barrier(3), threading.Semaphore(), threading.BoundedSemaphore(), threading.Condition(), event y otros
 
-#TODO Cambiar el diccionario cliente por una clase Cliente.
-#TODO ¿Como borrar un cliente que se desconectó con "ctrl + c"?
-#TODO Poner una seccion critica a las variables globales
-#TODO Ver como matar al proceso "online" cuando muere el main. Señal de ctrl + c para que tambien se la envíe al hijo. 
-#TODO Seccion critica??? En todo los lugares en que esté un q1 y e1.
-#TODO Ver si se puede con IPv4 y v6
-#TODO Estudiar las diferencias entre threading.Lock(), threading.RLock(), threading.Barrier(3), threading.Semaphore(), threading.BoundedSemaphore(), threading.Condition(), event y otros
