@@ -1,5 +1,6 @@
-import socket, pickle, argparse, threading, os
+import socket, pickle, argparse, threading, os, time
 import tkinter
+import functools
 
 def argumentos():
     parser = argparse.ArgumentParser()
@@ -16,21 +17,21 @@ def abrir_socket(args):
         print("Server:", host + ":" + str(port))
         s.connect((host, port))
         return s
-    
+
     except:
         print("No se puede establecer conexion, finalizando...")
         os._exit(0)
 
 
-def borrarPantalla(): 
+def borrarPantalla():
     if os.name == "posix":
         os.system ("clear")
-        
+
     elif os.name == "ce" or os.name == "nt" or os.name == "dos":
         os.system ("cls")
 
 
-def recibir(s):
+def recibir(s, e1):
     print("[ Server ]", pickle.loads(s.recv(10000)))
     threading.Thread(target=enviar, args=(s,)).start()
 
@@ -51,47 +52,115 @@ def enviar(s):
 def main():
     args = argumentos()
 
-    s = abrir_socket(args)
+    global mensaje
+    mensaje = {}    # Desde el server: {estado:... , tablero1:... , tablero2: ..., info:...}
+                    # Desde el gui:  {estado:... , disparo:...}
+                    
+    e1 = threading.Event()      #Contenido desde el server al gui
+    e2 = threading.Event()      #Contenido desde el gui al server
+    # s = abrir_socket(args)
 
-    threading.Thread(target=recibir, args=(s,)).start()
+    threading.Thread(target=gui, args=(e1, e2)).start()
+    
+    # threading.Thread(target=recibir, args=(s, e1)).start()
 
 
 
-def gui():
-    # https://www.youtube.com/watch?v=hTUJC8HsC2I 
+
+
+
+
+def salir(r):
+    r.destroy()
+    r.quit()
+    # y cerrar la conexion
+
+
+def barco(t):
+    print(t.find_withtag("AAA"))
+    t.coords(t.find_withtag("AAA"), (50, 50))
+
+
+
+def contenido_tableros(tablero1, tablero2, e1, e2):
+    global mensaje
+    #...
+    #Leer el 'mensaje' y establecer los barcos y disparos
+    tablero1.create_text(80,80, text='i', fill='red2', font = ('Arial', 18), tag="AAA")
+    
+
+
+
+
+
+
+def gui(e1, e2):
+    #T* Pantalla
     raiz = tkinter.Tk()
     raiz.title("Batalla Naval")
     # raiz.iconbitmap("ruta_foto.ico")
+
+    frame_principal = tkinter.Frame(raiz, width=800, height=600)
+    frame_principal.pack()
+
+    #T* Titulo
+    frame_titulo = tkinter.Frame(frame_principal, width=800, height=50, bg="black")
+    frame_titulo.grid(row=0, column=0)
+    frame_titulo.grid_propagate(False)   #No ajusta el tamaño del freame al contenido
+
+    b_salir = tkinter.Button(frame_titulo, text="Salir", bg='orange', command=functools.partial(salir, raiz))
+    b_salir.grid(row=0, column=0)
     
-    raiz.config(bg="blue")
+    boton = tkinter.Button(frame_titulo, text="Barco", bg='orange', command=functools.partial(barco, tablero1))
+    boton.grid(row=0, column=1)
+
+
+    #T* Tableros
+    frame_tableros = tkinter.Frame(frame_principal, width=800, height=550, bg="green")
+    frame_tableros.grid(row=1, column=0)
+    frame_tableros.grid_propagate(False)   #No ajusta el tamaño del freame al contenido
+
+    titulo1 = tkinter.Label(frame_tableros, text="Tablero 1:", font=("Arial", 18), padx=5, pady=5)
+    titulo1.grid(row=0, column=0, padx=5, pady=5)
+
+    titulo1 = tkinter.Label(frame_tableros, text="Tablero 2:", font=("Arial", 18), padx=5, pady=5)
+    titulo1.grid(row=0, column=1, padx=5, pady=5)
+
+    tablero1 = tkinter.Canvas(frame_tableros, bg='black', width=350, height=350)
+    tablero1.grid(row=1, column=0, padx=5, pady=5)
+
+    for x in range(0,460,32):
+        for y in range(0,460,32):
+            tablero1.create_rectangle(x,y,x+32, y+32, fill='gray15')
+
+
+    tablero2 = tkinter.Canvas(frame_tableros, bg='black', width=352, height=352)
+    tablero2.grid(row=1, column=1, padx=5, pady=5)
+
+    for x in range(0,460,32):
+        for y in range(0,460,32):
+            tablero2.create_rectangle(x,y,x+32, y+32, fill='gray15')
+
+
+    #T* Contenido
+    contenido_tableros(tablero1, tablero2, e1, e2)
     
-    
-    #++++++++++++++++++++++++++++
-    
-    mi_frame = tkinter.Frame(raiz, width=800, height=600,bg="red")
-    
-    mi_frame.pack()
-    
-    
-    #+++++++++++++++++++++++++++++
-    
-    mi_label = tkinter.Label(mi_frame, text="Hola bb", font=("Arial", 18), padx=5, pady=5)
-    
-    mi_label.grid(row=0,column=0)
-    
-    
-    #+++++++++++++++++++++++++++++
-    
-    cuadro_texto = tkinter.Entry(mi_frame, padx=5, pady=5)
-    cuadro_texto.grid(row=0,column=1)
-    
-    
-    #+++++++++++++++++++++++++++++
-    
+
+
+    # mi_label = tkinter.Label(mi_frame, text="❤", font=("Arial", 18), padx=5, pady=5)
+
+    # mi_label.grid(row=0, column=0, padx=5, pady=5)
+
+    # cuadro_texto = tkinter.Entry(mi_frame)
+    # cuadro_texto.grid(row=0, column=1, padx=5, pady=5)
+
     raiz.mainloop()     # Siempre al final
 
 
 
 if __name__ == '__main__':
     main()
-    # gui()
+    
+#TODO
+# El enviar no deberia ser un hilo nuevo, sino una ejecucion despues del mostrar el contenido en los tableros,
+# pero el recibir si deberia ser un hilo para evitar que la app se quede esperando.

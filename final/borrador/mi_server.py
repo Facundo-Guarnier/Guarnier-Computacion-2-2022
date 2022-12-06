@@ -1,4 +1,5 @@
-import socket, threading, os, pickle, multiprocessing, argparse, queue, time, signal
+import socket, threading, os, pickle, multiprocessing, argparse, queue, time, signal, random
+import pandas as pd
 
 # https://stackoverflow.com/questions/3991104/very-large-input-and-piping-using-subprocess-popen
 
@@ -19,8 +20,6 @@ def cliente(sock, q1, e1, pe):
         msg2 = pickle.dumps("Se encontró partida!! Sos el jugador 2")   #De normal a bits 
         sock.send(msg2)
         jugador2(sock, q1, e1, pe)
-
-
 
 
 def jugador1(sock, q1, e1, pe):
@@ -66,10 +65,6 @@ def jugador2(sock, q1, e1, pe):
         q1.put(msg1+", del j2")
         
         pe.wait()
-        
-        
-        pass
-
 
 
 def argumentos():
@@ -126,6 +121,95 @@ def aceptar_cliente(server):
         threading.Thread(target=cliente, args=(s2, q1, e1, pe)).start()
 
 
+def matriz_inicial():
+    matriz = []
+    for y in range(10):     #Filas
+        matriz.append([])
+        for x in range(10): #Columnas
+            matriz[y].append(" ")
+    return pd.DataFrame(matriz, index = ["A","B","C","D","E","F","G","H","I","J"])
+
+
+def matriiz_barco_random():
+    matriz = matriz_inicial()
+    contador_error = 0
+    tipos = ["L", "F", "D", "S", "P"]  
+    tamaño = 0
+    while len(tipos) > 0:
+        barco = tipos.pop()
+        n1 = random.randint(1, 2)
+        barco = barco+str(n1)
+        
+        #! Horizontal
+        if n1 == 1:
+            estado = False
+            while not(estado):
+                x_inicio = random.randint(0, 9)
+                y = random.randint(0, 9)
+                x_final = x_inicio + tamaño     #Hacia la derecha
+                if x_final > 9 or x_final < 0:
+                    x_final = x_inicio - tamaño #Hacia la izquerda
+                
+                estado = True
+                for i in range(tamaño+1):
+                    if matriz.ilco[y, x_inicio+i] != " ":
+                        estado = False
+                        print("Intento fallido de establecer el barco {} (error-s4)".format(barco))
+                        contador_error += 1
+                        
+                        
+                if estado:
+                    for i in range(tamaño+1):
+                        matriz.ilco[y, x_inicio+i] = barco
+                
+                
+                #! Para evitar que quede en un bucle de intentos fallidos
+                if contador_error > 100:
+                    matriz = matriz_inicial()
+                    contador_error = 0
+                    tipos = ["L", "F", "D", "S", "P"]  
+                    tamaño = -1
+                    estado = True
+                    
+            tamaño += 1
+            
+        #! Vertical
+        else:
+            estado = False
+            while not(estado):
+                y_inicio = random.randint(0, 9)
+                x = random.randint(0, 9)
+                y_final = x_inicio + tamaño     #Hacia la derecha
+                if y_final > 9 or y_final < 0:
+                    y_final = y_inicio - tamaño #Hacia la izquerda
+                
+                estado = True
+                for i in range(tamaño+1):
+                    if matriz.ilco[y_inicio+i, x] != " ":
+                        estado = False
+                        print("Intento fallido de establecer el barco {} (error-s4)".format(barco))
+                        contador_error += 1
+                        
+                        
+                if estado:
+                    for i in range(tamaño+1):
+                        matriz.ilco[y_inicio+i, x] = barco
+                
+                
+                #! Para evitar que quede en un bucle de intentos fallidos
+                if contador_error > 100:
+                    matriz = matriz_inicial()
+                    contador_error = 0
+                    tipos = ["L", "F", "D", "S", "P"]  
+                    tamaño = -1
+                    estado = True
+                    
+            tamaño += 1
+        
+        
+    return matriz
+
+
 #! Hilo de partida     
 def partida(jugadores):
     print("  Hilo 'Partida' ID:", threading.get_native_id())
@@ -140,13 +224,13 @@ def partida(jugadores):
     pe_jugador1 = jugadores[list(jugadores.keys())[0]]["pe"]
     pe_jugador2 = jugadores[list(jugadores.keys())[1]]["pe"]
     
-    
+    # {disparos_enemigos:... , mis_barcos:..., cant_hundidos:...}
+    tablero1 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriiz_barco_random(), "cant_hundidos": 0}     
+    tablero2 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriiz_barco_random(), "cant_hundidos": 0}
     
     #! Avisar a los jugadores que se encontró partida y quien es el jugador 1 y el 2.
     q_jugador1.put("1")
     q_jugador2.put("2")
-    
-    
     
     
     #! Siempre empieza el jugador 1. 
@@ -154,11 +238,13 @@ def partida(jugadores):
 
         #! Desde acá deberia empezar el jugador1
         pe_jugador1.wait()
-        msg1 = q_jugador1.get()
+        msg1 = q_jugador1.get()     # {estado:... , disparo:...}
         
+        #TODO Crear la tabla de los bacros
         # ...
         # Procesar el mensaje del primer jugador.
         # ...
+        msg1, tablero1, tablero2 = jugada(msg1, tablero1, tablero2)
         msg1 = msg1 + ", este mensaje fue procesado por el hilo 'Partida' :)"
         q_jugador2.put(msg1)
         e_jugador1.set()
@@ -179,6 +265,94 @@ def partida(jugadores):
         pass
 
 
+#! Procesamiento del disparo
+def jugada(msg, tablero1, tablero2):
+    # msg: {estado:... , disparo:...}
+    # tablero: {disparos_enemigos:... , mis_barcos:..., cant_hundidos:...}
+    
+    codificacion = str.maketrans(
+        'ABCDEFGHIJ',
+        "0123456789",
+        )
+    
+    #* 1 - Revisar que el disparo (A1) sea coherente (menor a 10 y a J).
+    try:
+        fila = int(msg[0].translate(codificacion))
+        columna = int(msg[1])
+    except:
+        return "Valores no validos (error-s1)", tablero1, tablero2
+
+    if (fila > 9 or fila < 0 or columna > 9 or columna < 0):
+        return "Valores fuera de rango (error-s2)", tablero1, tablero2
+
+
+    #* 2 - Revisar si ya se disparó en ese lugar (comprobar en disparos_enemigos en tablero 2).
+    if tablero2["disparos_enemigos"].iloc[fila, columna] != " ":
+        return "Disparo realizado con aterioridad (error-s3)", tablero1, tablero2
+    
+    
+    #* 3 - Comprobar si le dió a un barco y Guardar Tocado o Agua respectivamente.
+    if tablero2["mis_barcos"].iloc[fila, columna] == " ":
+        tablero2["disparos_enemigos"].iloc[fila, columna] = "A"
+        return "AGUA!! El disparo fue errado.", tablero1, tablero2
+    
+    else:
+        tablero2["disparos_enemigos"].iloc[fila, columna] = "T"  #Tocado
+        
+        #* 3.1 - Revisar si el barco está undido. 
+        #! Barco hundido
+        #! Contar sobre el eje 'X' o sobre el eje 'Y' si hay x cantidad de tocados partiendo desde msg
+        if (es_hundido(fila, columna, tablero2)):
+            tablero2["cant_hundidos"] = tablero2["cant_hundidos"] + 1
+        
+            #* 3.2 - Comprobar si se hundieron todos los barcos.
+            if tablero2["cant_hundidos"] >= 5:
+                return "Todos los barcos han sido hundidos!!!", tablero1, tablero2
+        
+            else:
+                return "HUNDIDO!! El disparo fue certero, hundiste a {}.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2
+
+        #! Barco no hundido
+        else:
+            return "TOCADO!! El disparo fue certero, le diste a {}.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2
+
+
+def es_hundido(fila, columna, tablero2):
+    tipo_barco = tablero2["mis_barcos"].iloc[fila, columna]
+    tamaño_barco = 0
+    tamaño_tocado = 0
+    #! Barcos horizontales
+    if "1" in tipo_barco:
+        for x in range(10):
+            if tablero2["mis_barcos"].iloc[x, columna] == tipo_barco:
+                tamaño_barco += 1
+                if tablero2["disparos_enemigos"].iloc[x, columna] == "T":
+                    tamaño_tocado += 1
+        return tamaño_barco == tamaño_tocado
+
+    #! Barcos verticales
+    else :
+        for y in range(10):
+            if tablero2["mis_barcos"].iloc[fila, y] == tipo_barco:
+                tamaño_barco += 1
+                if tablero2["disparos_enemigos"].iloc[fila, y] == "T":
+                    tamaño_tocado += 1
+        return tamaño_barco == tamaño_tocado
+
+
+def tipo_barco(letra):
+    #! 1 = horizontal
+    #! 2 = vertical
+    if letra == "P1" or letra == "P2":
+        return "un Portaaviones"
+    elif letra == "S1" or letra == "S2":
+        return "un Submarino"
+    elif letra == "D1" or letra == "D2":
+        return "un Destructor"
+    elif letra == "L1" or letra == "L2":
+        return "una Lancha torpedera"
+    elif letra == "F1" or letra == "F2":
+        return "una Fragata"
 
 
 #! Acá tiene que agregar al diccionario las conexiones
@@ -254,7 +428,7 @@ if __name__ == '__main__':
 
 
 #TODO:
-# Cambiar el diccionario cliente por una clase Cliente.
+# Cambiar los diccionarios por clases.
 # ¿Como borrar un cliente que se desconectó con "ctrl + c"?
 # Poner una seccion critica a las variables globales
 #//  Ver como matar al proceso "online" cuando muere el main. Señal de ctrl + c para que tambien se la envíe al hijo. 

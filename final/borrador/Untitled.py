@@ -1,23 +1,44 @@
+# import pandas as pd
 
-import multiprocessing, time, os
+# def matriz_inicial():
+#     matriz = []
+#     for y in range(10):     #Filas
+#         matriz.append([])
+#         for x in range(10): #Columnas
+#             matriz[y].append(" ")
+#     return pd.DataFrame(matriz, index = ["A","B","C","D","E","F","G","H","I","J"])
 
-def proceso():
-    while True:
-        print("  Proceso 'Proceso' ID:", os.getpid())
-        time.sleep(5)
+
+# matriz = matriz_inicial()
+
+# codificacion = str.maketrans(
+#         'ABCDEFGHIJ',
+#         "0123456789",
+#         )
+
+# msg1 = "A9"
+
+# fila = msg1[0].translate(codificacion)
+# columna = msg1[1]
+
+# # print(fila, columna)
 
 
+# tablero = {"disparos_enemigos": matriz, "mis_barcos": matriz}
 
-print("ID proceso padre:", os.getpid())
-pro =  multiprocessing.Process(target=proceso)
-pro.start()
-print("Esta es la ID de 'pro':", pro.pid)
-print("Esta es la Ident de 'pro'", pro.ident)
+# matriz.iloc[int(fila), int(columna)]="aaaa"
+# # print(matriz)
+# print(matriz.iloc[int(fila), int(columna)])
 
-time.sleep(16)
-print("Matando al proceso")
-# pro.kill()
-# pro.terminate()
-print("Padre esperando...")
-time.sleep(10)
-print("FIN")
+# import random
+# i = 0
+# while True:
+#     n = random.randint(0, 9)
+#     if n == 0:
+#         print(i, n)
+#         break
+#     i += 1
+
+
+for i in range(0):
+    print(i)
