@@ -130,7 +130,7 @@ def matriz_inicial():
     return pd.DataFrame(matriz, index = ["A","B","C","D","E","F","G","H","I","J"])
 
 
-def matriiz_barco_random():
+def matriz_barco_random():
     matriz = matriz_inicial()
     contador_error = 0
     tipos = ["L", "F", "D", "S", "P"]  
@@ -253,8 +253,8 @@ def partida(jugadores):
     pe_jugador2 = jugadores[list(jugadores.keys())[1]]["pe"]
     
     # {disparos_enemigos:... , mis_barcos:..., cant_hundidos:...}
-    tablero1 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriiz_barco_random(), "cant_hundidos": 0}     
-    tablero2 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriiz_barco_random(), "cant_hundidos": 0}
+    tablero1 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriz_barco_random(), "cant_hundidos": 0}     
+    tablero2 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriz_barco_random(), "cant_hundidos": 0}
     
 
     
