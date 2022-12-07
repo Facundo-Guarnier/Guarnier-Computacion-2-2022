@@ -1,6 +1,7 @@
 import socket, pickle, argparse, threading, os, time
 import tkinter
 import functools
+import pandas as pd
 
 def argumentos():
     parser = argparse.ArgumentParser()
@@ -33,12 +34,14 @@ def borrarPantalla():
 
 def recibir(s, e1):
     while True:
+        global mensaje
         mensaje = pickle.loads(s.recv(10000))        
         print("[ Server ]", mensaje[0] )
         
-        print("Mis barcos: \n", mensaje[1]["mis_barcos"])
-        print("Disparos enemigos: \n", mensaje[2]["disparos_enemigos"])
-        print("Mis disparos: \n", mensaje[2]["disparos_enemigos"])
+        # print("Mis barcos: \n", mensaje[1]["mis_barcos"])
+        e1.set()
+        # print("Disparos enemigos: \n", mensaje[2]["disparos_enemigos"])
+        # print("Mis disparos: \n", mensaje[2]["disparos_enemigos"])
     
 
     
@@ -68,15 +71,12 @@ def main():
     e1 = threading.Event()      #Contenido desde el server al gui
     e2 = threading.Event()      #Contenido desde el gui al server
     s = abrir_socket(args)
-
-    # threading.Thread(target=gui, args=(e1, e2)).start()
+    
+    
+    threading.Thread(target=gui, args=(e1, e2)).start()
+    
     
     threading.Thread(target=recibir, args=(s, e1)).start()
-
-
-
-
-
 
 
 def salir(r):
@@ -90,17 +90,26 @@ def barco(t):
     t.coords(t.find_withtag("AAA"), (50, 50))
 
 
-
 def contenido_tableros(tablero1, tablero2, e1, e2):
-    global mensaje
-    #...
-    #Leer el 'mensaje' y establecer los barcos y disparos
-    tablero1.create_text(80,80, text='i', fill='red2', font = ('Arial', 18), tag="AAA")
+    print ("[ GUI ] Esperando evento")
+    e1.wait()
+    print ("[ GUI ] Evento recibido")
     
-
-
-
-
+    global mensaje
+    mis_barcos = mensaje[1]["mis_barcos"]
+    
+    print(mis_barcos)
+    
+    x_tabla = 0
+    y_tabla = 0
+    for y_gui in range(32,352,32):
+        for x_gui in range(32,352,32):
+            tablero1.create_text(16+x_gui,16+y_gui, text=mis_barcos.iloc[y_tabla, x_tabla], fill='red2', font = ('Arial', 18), tag="AAA")        
+            print("Barco en {}{}: {}".format(x_tabla,y_tabla,mis_barcos.iloc[y_tabla, x_tabla]))    
+            x_tabla += 1
+        x_tabla = 0    
+        y_tabla += 1
+        
 
 
 def gui(e1, e2):
@@ -120,8 +129,7 @@ def gui(e1, e2):
     b_salir = tkinter.Button(frame_titulo, text="Salir", bg='orange', command=functools.partial(salir, raiz))
     b_salir.grid(row=0, column=0)
     
-    boton = tkinter.Button(frame_titulo, text="Barco", bg='orange', command=functools.partial(barco, tablero1))
-    boton.grid(row=0, column=1)
+
 
 
     #T* Tableros
@@ -150,6 +158,8 @@ def gui(e1, e2):
         for y in range(0,460,32):
             tablero2.create_rectangle(x,y,x+32, y+32, fill='gray15')
 
+    boton = tkinter.Button(frame_titulo, text="Barco", bg='orange', command=functools.partial(barco, tablero1))
+    boton.grid(row=0, column=1)
 
     #T* Contenido
     contenido_tableros(tablero1, tablero2, e1, e2)

@@ -38,9 +38,7 @@
 #         print(i, n)
 #         break
 #     i += 1
-
-
-a = ["a", "b"]
-b = ["c"]
-
-print(["c"]+ a)
+x=0
+for y_gui in range(32,352,32):
+    print(y_gui, x)
+    x += 1
