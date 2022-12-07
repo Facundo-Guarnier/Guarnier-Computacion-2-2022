@@ -9,15 +9,15 @@ import pandas as pd
 def cliente(sock, q1, e1, pe):   
     print("  Hilo 'Conexion' ID:", threading.get_native_id())
 
-    jugador = q1.get()
+    mensaje = q1.get()
 
-    if "1" == jugador: 
-        msg2 = pickle.dumps("Se encontró partida!! Sos el jugador 1")   #De normal a bits 
+    if "1" == mensaje[0]: 
+        msg2 = pickle.dumps(mensaje)   #De normal a bits 
         sock.send(msg2)
         jugador1(sock, q1, e1, pe)
         
-    elif "2" == jugador:
-        msg2 = pickle.dumps("Se encontró partida!! Sos el jugador 2")   #De normal a bits 
+    elif "2" == mensaje[0]:
+        msg2 = pickle.dumps(mensaje)   #De normal a bits 
         sock.send(msg2)
         jugador2(sock, q1, e1, pe)
 
@@ -134,7 +134,8 @@ def matriiz_barco_random():
     matriz = matriz_inicial()
     contador_error = 0
     tipos = ["L", "F", "D", "S", "P"]  
-    tamaño = 0
+    tamaño = 4
+    print("\n+++++++++++++++++++++ Nueva matriz +++++++++++++++++++++++++\nMatriz barco:\n", matriz)
     while len(tipos) > 0:
         barco = tipos.pop()
         n1 = random.randint(1, 2)
@@ -147,22 +148,36 @@ def matriiz_barco_random():
                 x_inicio = random.randint(0, 9)
                 y = random.randint(0, 9)
                 x_final = x_inicio + tamaño     #Hacia la derecha
+                derecha = True
+
                 if x_final > 9 or x_final < 0:
                     x_final = x_inicio - tamaño #Hacia la izquerda
+                    derecha = False
                 
+                print("\n--------------------------------------------------------\nX incio {}, x fin {}, barco {}".format(x_inicio,x_final, barco))
                 estado = True
                 for i in range(tamaño+1):
-                    if matriz.ilco[y, x_inicio+i] != " ":
-                        estado = False
-                        print("Intento fallido de establecer el barco {} (error-s4)".format(barco))
-                        contador_error += 1
+                    if derecha:
+                        if matriz.iloc[y, x_inicio+i] != " ":
+                            estado = False
+                            print("Intento fallido de establecer el barco {} (error-s4)".format(barco))
+                            contador_error += 1
+                            
+                    else:
+                        if matriz.iloc[y, x_inicio-i] != " ":
+                            estado = False
+                            print("Intento fallido de establecer el barco {} (error-s5)".format(barco))
+                            contador_error += 1
                         
-                        
-                if estado:
+                print("Estado {} del barco {}".format(estado, barco))
+                if estado and derecha:
                     for i in range(tamaño+1):
-                        matriz.ilco[y, x_inicio+i] = barco
-                
-                
+                        matriz.iloc[y, x_inicio+i] = barco
+                elif estado and not(derecha):
+                    for i in range(tamaño+1):
+                        matriz.iloc[y, x_inicio-i] = barco
+                    
+                    
                 #! Para evitar que quede en un bucle de intentos fallidos
                 if contador_error > 100:
                     matriz = matriz_inicial()
@@ -171,7 +186,7 @@ def matriiz_barco_random():
                     tamaño = -1
                     estado = True
                     
-            tamaño += 1
+            tamaño -= 1
             
         #! Vertical
         else:
@@ -179,21 +194,33 @@ def matriiz_barco_random():
             while not(estado):
                 y_inicio = random.randint(0, 9)
                 x = random.randint(0, 9)
-                y_final = x_inicio + tamaño     #Hacia la derecha
+                y_final = y_inicio + tamaño     #Hacia abajo
+                abajo = True
                 if y_final > 9 or y_final < 0:
-                    y_final = y_inicio - tamaño #Hacia la izquerda
-                
+                    y_final = y_inicio - tamaño #Hacia arriba
+                    abajo = False
+                    
+                print("\n--------------------------------------------------------\nY incio {}, Y fin {}, barco {}".format(y_inicio,y_final, barco))
                 estado = True
                 for i in range(tamaño+1):
-                    if matriz.ilco[y_inicio+i, x] != " ":
-                        estado = False
-                        print("Intento fallido de establecer el barco {} (error-s4)".format(barco))
-                        contador_error += 1
+                    if abajo:
+                        if matriz.iloc[y_inicio+i, x] != " ":
+                            estado = False
+                            print("Intento fallido de establecer el barco {} (error-s6)".format(barco))
+                            contador_error += 1
+                        else:
+                            if matriz.iloc[y_inicio-i, x] != " ":
+                                estado = False
+                                print("Intento fallido de establecer el barco {} (error-s7)".format(barco))
+                                contador_error += 1
                         
-                        
-                if estado:
+                print("Estado {} del barco {}".format(estado, barco))
+                if estado and abajo:
                     for i in range(tamaño+1):
-                        matriz.ilco[y_inicio+i, x] = barco
+                        matriz.iloc[y_inicio+i, x] = barco
+                elif estado and not(abajo):
+                    for i in range(tamaño+1):
+                        matriz.iloc[y_inicio-i, x] = barco
                 
                 
                 #! Para evitar que quede en un bucle de intentos fallidos
@@ -204,8 +231,9 @@ def matriiz_barco_random():
                     tamaño = -1
                     estado = True
                     
-            tamaño += 1
+            tamaño -= 1
         
+        print("Matriz barco:\n", matriz)
         
     return matriz
 
@@ -228,9 +256,11 @@ def partida(jugadores):
     tablero1 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriiz_barco_random(), "cant_hundidos": 0}     
     tablero2 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriiz_barco_random(), "cant_hundidos": 0}
     
+
+    
     #! Avisar a los jugadores que se encontró partida y quien es el jugador 1 y el 2.
-    q_jugador1.put("1")
-    q_jugador2.put("2")
+    q_jugador1.put(["1", tablero1, tablero2])
+    q_jugador2.put(["2", tablero2, tablero1])
     
     
     #! Siempre empieza el jugador 1. 
@@ -384,12 +414,11 @@ def online(server):
         if len(jugadores_espera) >= 2:
             print("++++++++++++++++++++ Se pudo establecer una partida ++++++++++++++++++++")
             threading.Thread(target=partida, args=(jugadores_espera,)).start()
-            print("Jugadores en espera:", jugadores_espera)
 
             for clave in jugadores_espera.keys():
                 clientes[clave]["espera"] = False
-        
-            time.sleep(5)
+
+            time.sleep(300)
 
         else:
             print("++++++++++++++++++++ Esperando jugador nuevo ++++++++++++++++++++")
@@ -428,6 +457,7 @@ if __name__ == '__main__':
 
 
 #TODO:
+# Separar los barcos un lugar a los costados, no se pueden estar tocando.
 # Cambiar los diccionarios por clases.
 # ¿Como borrar un cliente que se desconectó con "ctrl + c"?
 # Poner una seccion critica a las variables globales

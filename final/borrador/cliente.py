@@ -32,14 +32,23 @@ def borrarPantalla():
 
 
 def recibir(s, e1):
-    print("[ Server ]", pickle.loads(s.recv(10000)))
-    threading.Thread(target=enviar, args=(s,)).start()
-
     while True:
-        msg2 = s.recv(10000)
-        msg2 = pickle.loads(msg2)   #De bits a normal
-        borrarPantalla()
-        print("[ Server ]", msg2)
+        mensaje = pickle.loads(s.recv(10000))        
+        print("[ Server ]", mensaje[0] )
+        
+        print("Mis barcos: \n", mensaje[1]["mis_barcos"])
+        print("Disparos enemigos: \n", mensaje[2]["disparos_enemigos"])
+        print("Mis disparos: \n", mensaje[2]["disparos_enemigos"])
+    
+
+    
+    # threading.Thread(target=enviar, args=(s,)).start()
+
+    # while True:
+    #     msg2 = s.recv(10000)
+    #     msg2 = pickle.loads(msg2)   #De bits a normal
+    #     borrarPantalla()
+    #     print("[ Server ]", msg2)
 
 
 def enviar(s):
@@ -58,11 +67,11 @@ def main():
                     
     e1 = threading.Event()      #Contenido desde el server al gui
     e2 = threading.Event()      #Contenido desde el gui al server
-    # s = abrir_socket(args)
+    s = abrir_socket(args)
 
-    threading.Thread(target=gui, args=(e1, e2)).start()
+    # threading.Thread(target=gui, args=(e1, e2)).start()
     
-    # threading.Thread(target=recibir, args=(s, e1)).start()
+    threading.Thread(target=recibir, args=(s, e1)).start()
 
 
 

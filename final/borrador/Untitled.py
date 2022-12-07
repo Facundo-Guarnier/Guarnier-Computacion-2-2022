@@ -40,5 +40,7 @@
 #     i += 1
 
 
-for i in range(0):
-    print(i)
+a = ["a", "b"]
+b = ["c"]
+
+print(["c"]+ a)
