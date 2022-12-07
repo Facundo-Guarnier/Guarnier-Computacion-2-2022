@@ -32,51 +32,11 @@ def borrarPantalla():
         os.system ("cls")
 
 
-def recibir(s, e1):
-    while True:
-        global mensaje
-        mensaje = pickle.loads(s.recv(10000))        
-        print("[ Server ]", mensaje[0] )
-        
-        # print("Mis barcos: \n", mensaje[1]["mis_barcos"])
-        e1.set()
-        # print("Disparos enemigos: \n", mensaje[2]["disparos_enemigos"])
-        # print("Mis disparos: \n", mensaje[2]["disparos_enemigos"])
-    
-
-    
-    # threading.Thread(target=enviar, args=(s,)).start()
-
-    # while True:
-    #     msg2 = s.recv(10000)
-    #     msg2 = pickle.loads(msg2)   #De bits a normal
-    #     borrarPantalla()
-    #     print("[ Server ]", msg2)
-
-
 def enviar(s):
     while True:
         msg1 = input("[ Cliente ]: ")
         msg1 = pickle.dumps(msg1)     #De normal a bits
         s.send(msg1)
-
-
-def main():
-    args = argumentos()
-
-    global mensaje
-    mensaje = {}    # Desde el server: {estado:... , tablero1:... , tablero2: ..., info:...}
-                    # Desde el gui:  {estado:... , disparo:...}
-                    
-    e1 = threading.Event()      #Contenido desde el server al gui
-    e2 = threading.Event()      #Contenido desde el gui al server
-    s = abrir_socket(args)
-    
-    
-    threading.Thread(target=gui, args=(e1, e2)).start()
-    
-    
-    threading.Thread(target=recibir, args=(s, e1)).start()
 
 
 def salir(r):
@@ -90,12 +50,53 @@ def barco(t):
     t.coords(t.find_withtag("AAA"), (50, 50))
 
 
-def contenido_tableros(tablero1, tablero2, e1, e2):
-    print ("[ GUI ] Esperando evento")
-    e1.wait()
-    print ("[ GUI ] Evento recibido")
+def main():
+    args = argumentos()
+
+    s = abrir_socket(args)
+        
+    gui(s)
     
-    global mensaje
+    
+    
+def recibir(s):
+    while True:
+        mensaje = pickle.loads(s.recv(10000))        
+        print("[ Server ]", mensaje[0] )
+        
+        # print("Mis barcos: \n", mensaje[1]["mis_barcos"])
+        # print("Disparos enemigos: \n", mensaje[2]["disparos_enemigos"])
+        # print("Mis disparos: \n", mensaje[2]["disparos_enemigos"])
+        return mensaje
+
+    
+    # threading.Thread(target=enviar, args=(s,)).start()
+
+    # while True:
+    #     msg2 = s.recv(10000)
+    #     msg2 = pickle.loads(msg2)   #De bits a normal
+    #     borrarPantalla()
+    #     print("[ Server ]", msg2)
+    pass
+
+
+def indices_tablero(tablero):
+    x = 0
+    for x_gui in range(32,352,32):
+        tablero.create_text(16+x_gui, 16, text=x, fill='white', font = ('Arial', 18), tag="AAA")        
+        x += 1
+        
+    abc = "ABCDEFGHIJ"
+    y = 0
+    for y_gui in range(32,352,32):
+        tablero.create_text(16, 16+y_gui, text=abc[y], fill='white', font = ('Arial', 18), tag="AAA")        
+        y += 1
+    
+
+
+def barcos_tableros(tablero1, tablero2, s):
+    mensaje = recibir(s)
+    
     mis_barcos = mensaje[1]["mis_barcos"]
     
     print(mis_barcos)
@@ -104,15 +105,14 @@ def contenido_tableros(tablero1, tablero2, e1, e2):
     y_tabla = 0
     for y_gui in range(32,352,32):
         for x_gui in range(32,352,32):
-            tablero1.create_text(16+x_gui,16+y_gui, text=mis_barcos.iloc[y_tabla, x_tabla], fill='red2', font = ('Arial', 18), tag="AAA")        
-            print("Barco en {}{}: {}".format(x_tabla,y_tabla,mis_barcos.iloc[y_tabla, x_tabla]))    
+            tablero1.create_text(16+x_gui,16+y_gui, text=mis_barcos.iloc[y_tabla, x_tabla][0], fill='red2', font = ('Arial', 18), tag="AAA")        
             x_tabla += 1
         x_tabla = 0    
         y_tabla += 1
         
 
 
-def gui(e1, e2):
+def gui(s):
     #T* Pantalla
     raiz = tkinter.Tk()
     raiz.title("Batalla Naval")
@@ -162,7 +162,9 @@ def gui(e1, e2):
     boton.grid(row=0, column=1)
 
     #T* Contenido
-    contenido_tableros(tablero1, tablero2, e1, e2)
+    indices_tablero(tablero1)
+    indices_tablero(tablero2)
+    barcos_tableros(tablero1, tablero2, s)
     
 
 
