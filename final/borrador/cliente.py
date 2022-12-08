@@ -1,7 +1,17 @@
-import socket, pickle, argparse, threading, os, time
+import socket, argparse, threading, os, time, pickle
 import tkinter
 import functools
 import pandas as pd
+
+
+def enviar_mensaje(s, m):
+    s.send(pickle.dumps(m))
+
+
+def recibir_mensaje(s):
+    mensaje = s.recv(10000) 
+    return pickle.loads(mensaje)
+
 
 def argumentos():
     parser = argparse.ArgumentParser()
@@ -35,8 +45,7 @@ def borrarPantalla():
 def enviar(s):
     while True:
         msg1 = input("[ Cliente ]: ")
-        msg1 = pickle.dumps(msg1)     #De normal a bits
-        s.send(msg1)
+        enviar_mensaje(s, msg1)
 
 
 def salir(r):
@@ -61,7 +70,7 @@ def main():
     
 def recibir(s):
     while True:
-        mensaje = pickle.loads(s.recv(10000))        
+        mensaje = recibir_mensaje(s)
         print("[ Server ]", mensaje[0] )
         
         # print("Mis barcos: \n", mensaje[1]["mis_barcos"])
@@ -73,8 +82,7 @@ def recibir(s):
     # threading.Thread(target=enviar, args=(s,)).start()
 
     # while True:
-    #     msg2 = s.recv(10000)
-    #     msg2 = pickle.loads(msg2)   #De bits a normal
+    #     msg2 = recibir_mensaje(s)
     #     borrarPantalla()
     #     print("[ Server ]", msg2)
     pass
@@ -161,11 +169,13 @@ def gui(s):
     boton = tkinter.Button(frame_titulo, text="Barco", bg='orange', command=functools.partial(barco, tablero1))
     boton.grid(row=0, column=1)
 
+    
     #T* Contenido
     indices_tablero(tablero1)
     indices_tablero(tablero2)
-    barcos_tableros(tablero1, tablero2, s)
-    
+    # barcos_tableros(tablero1, tablero2, s)
+    threading.Thread(target=barcos_tableros, args=(tablero1, tablero2, s)).start()
+    raiz.mainloop()     # Siempre al final
 
 
     # mi_label = tkinter.Label(mi_frame, text="❤", font=("Arial", 18), padx=5, pady=5)
@@ -175,7 +185,6 @@ def gui(s):
     # cuadro_texto = tkinter.Entry(mi_frame)
     # cuadro_texto.grid(row=0, column=1, padx=5, pady=5)
 
-    raiz.mainloop()     # Siempre al final
 
 
 

@@ -1,32 +1,36 @@
-import socket, threading, os, pickle, multiprocessing, argparse, queue, time, signal, random
+import socket, threading, os, multiprocessing, argparse, queue, time, signal, random, pickle
 import pandas as pd
 
 # https://stackoverflow.com/questions/3991104/very-large-input-and-piping-using-subprocess-popen
 
 
-# pickle.loads(msg)  bits -> Normal
-# pickle.dumps(msg)  Normal -> bits
+def enviar_mensaje(s, m):
+    s.send(pickle.dumps(m))
+
+
+def recibir_mensaje(s):
+    mensaje = s.recv(10000) 
+    return pickle.loads(mensaje)
+
+
 def cliente(sock, q1, e1, pe):   
     print("  Hilo 'Conexion' ID:", threading.get_native_id())
 
     mensaje = q1.get()
-
+        
     if "1" == mensaje[0]: 
-        msg2 = pickle.dumps(mensaje)   #De normal a bits 
-        sock.send(msg2)
+        enviar_mensaje(sock, mensaje)
         jugador1(sock, q1, e1, pe)
         
     elif "2" == mensaje[0]:
-        msg2 = pickle.dumps(mensaje)   #De normal a bits 
-        sock.send(msg2)
+        enviar_mensaje(sock, mensaje)
         jugador2(sock, q1, e1, pe)
 
 
 def jugador1(sock, q1, e1, pe):
     while True:
         #! Desde acá deberia empezar el jugador1
-        msg1 = sock.recv(10000)      #Recibe bits
-        msg1 = pickle.loads(msg1)   #De bits a normal
+        msg1 = recibir_mensaje(sock)
         
         q1.put(msg1+", del j1")
         
@@ -40,9 +44,8 @@ def jugador1(sock, q1, e1, pe):
         
         e1.clear()
         
-        msg2 = pickle.dumps(msg2)   #De normal a bits 
-        sock.send(msg2)
-        
+        enviar_mensaje(sock, msg2)
+
         pass
 
 
@@ -55,12 +58,10 @@ def jugador2(sock, q1, e1, pe):
         
         e1.clear()
         
-        msg2 = pickle.dumps(msg2)   #De normal a bits 
-        sock.send(msg2)
+        enviar_mensaje(sock, msg2)
         
         #! Desde acá deberia empezar el jugador1
-        msg1 = sock.recv(10000)      #Recibe bits
-        msg1 = pickle.loads(msg1)   #De bits a normal
+        msg1 = recibir_mensaje(sock)
         
         q1.put(msg1+", del j2")
         
@@ -78,8 +79,11 @@ def abrir_socket(args):
     host = "0.0.0.0"
     port = args.p
 
+    
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((host, port))
+
+    
 
     print("Padre ID:", os.getpid())
     print("Server 'ON' <" + host + ": " + str(port) + ">")
@@ -103,8 +107,7 @@ def aceptar_cliente(server):
         q1 = queue.Queue(maxsize=1)
         e1 = threading.Event()      # Predeterminado es falso
         pe = threading.Barrier(2)
-        # nickname = s2.recv(10000)
-        # nickname = pickle.loads(nickname)
+        # nickname = recibir_mensaje(s2)
         nickname = "Jugador" + str(addr[1])
         
         
@@ -135,7 +138,7 @@ def matriz_barco_random():
     contador_error = 0
     tipos = ["L", "F", "D", "S", "P"]  
     tamaño = 4
-    print("\n+++++++++++++++++++++ Nueva matriz +++++++++++++++++++++++++\nMatriz barco:\n", matriz)
+    # print("\n+++++++++++++++++++++ Nueva matriz +++++++++++++++++++++++++\nMatriz barco:\n", matriz)
     while len(tipos) > 0:
         barco = tipos.pop()
         n1 = random.randint(1, 2)
@@ -154,22 +157,22 @@ def matriz_barco_random():
                     x_final = x_inicio - tamaño #Hacia la izquerda
                     derecha = False
                 
-                print("\n--------------------------------------------------------\nX incio {}, x fin {}, barco {}".format(x_inicio,x_final, barco))
+                # print("\n--------------------------------------------------------\nX incio {}, x fin {}, barco {}".format(x_inicio,x_final, barco))
                 estado = True
                 for i in range(tamaño+1):
                     if derecha:
                         if matriz.iloc[y, x_inicio+i] != " ":
                             estado = False
-                            print("Intento fallido de establecer el barco {} (error-s4)".format(barco))
+                            # print("Intento fallido de establecer el barco {} (error-s4)".format(barco))
                             contador_error += 1
                             
                     else:
                         if matriz.iloc[y, x_inicio-i] != " ":
                             estado = False
-                            print("Intento fallido de establecer el barco {} (error-s5)".format(barco))
+                            # print("Intento fallido de establecer el barco {} (error-s5)".format(barco))
                             contador_error += 1
                         
-                print("Estado {} del barco {}".format(estado, barco))
+                # print("Estado {} del barco {}".format(estado, barco))
                 if estado and derecha:
                     for i in range(tamaño+1):
                         matriz.iloc[y, x_inicio+i] = barco
@@ -200,21 +203,21 @@ def matriz_barco_random():
                     y_final = y_inicio - tamaño #Hacia arriba
                     abajo = False
                     
-                print("\n--------------------------------------------------------\nY incio {}, Y fin {}, barco {}".format(y_inicio,y_final, barco))
+                # print("\n--------------------------------------------------------\nY incio {}, Y fin {}, barco {}".format(y_inicio,y_final, barco))
                 estado = True
                 for i in range(tamaño+1):
                     if abajo:
                         if matriz.iloc[y_inicio+i, x] != " ":
                             estado = False
-                            print("Intento fallido de establecer el barco {} (error-s6)".format(barco))
+                            # print("Intento fallido de establecer el barco {} (error-s6)".format(barco))
                             contador_error += 1
                         else:
                             if matriz.iloc[y_inicio-i, x] != " ":
                                 estado = False
-                                print("Intento fallido de establecer el barco {} (error-s7)".format(barco))
+                                # print("Intento fallido de establecer el barco {} (error-s7)".format(barco))
                                 contador_error += 1
                         
-                print("Estado {} del barco {}".format(estado, barco))
+                # print("Estado {} del barco {}".format(estado, barco))
                 if estado and abajo:
                     for i in range(tamaño+1):
                         matriz.iloc[y_inicio+i, x] = barco
@@ -233,8 +236,8 @@ def matriz_barco_random():
                     
             tamaño -= 1
         
-        print("Matriz barco:\n", matriz)
-        
+        # print("Matriz barco:\n", matriz)
+    print("Tablero de barco completado")
     return matriz
 
 
@@ -465,4 +468,12 @@ if __name__ == '__main__':
 # Seccion critica??? En todo los lugares en que esté un q1 y e1.
 # Ver si se puede con IPv4 y v6
 # Estudiar las diferencias entre threading.Lock(), threading.RLock(), threading.Barrier(3), threading.Semaphore(), threading.BoundedSemaphore(), threading.Condition(), event y otros
+# Cerrar una conexxion: s2.close()
 
+
+#T* Problema: 
+# Al momento de deserializar el recv, el pickle.loads() solo tiene en cuenta el primer mensaje, el resto de los mismos 
+# son ignorados. El funcionamiento del server es correcto, ya que si llegan los multiples mensajes serializados (print(mensaje)).
+# Intenté utilizar otros modulos (decode, json, marshal) pero no son compatibles con los tipos de datos que utilizo en la app. 
+
+#* Por ahora voy a usar el pickle ya que es compatible con todos los tipos de datos pero no podré enviar multiples mensajes si no son consumidos al intante. 
