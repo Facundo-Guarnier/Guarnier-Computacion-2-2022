@@ -44,42 +44,20 @@ def borrarPantalla():
 
 def enviar(s):
     while True:
-        msg1 = input("[ Cliente ]: ")
+        msg1 = input("[ Cliente ] ")
         enviar_mensaje(s, msg1)
 
 
-def salir(r):
-    r.destroy()
-    r.quit()
-    # y cerrar la conexion
-    pass
-
-
-def barco(tablero):
-    print(tablero.itemcget("#99", "fill"))      # Devuelve el valor de la configuracion
-    tablero.itemconfig("#99", fill="blue")      # Cambia la configuracion del elemento
-
-
-def main():
-    args = argumentos()
-
-    global pe
-    pe = threading.Barrier(2)
-
-    # s = abrir_socket(args)
-    s=""
-    gui(s)   
-
-
+#! [msg1, tablero1, tablero2]
 def recibir(s):
     while True:
         mensaje = recibir_mensaje(s)
         print("[ Server ]", mensaje[0] )
-        
-        # print("Mis barcos: \n", mensaje[1]["mis_barcos"])
-        # print("Disparos enemigos: \n", mensaje[2]["disparos_enemigos"])
-        # print("Mis disparos: \n", mensaje[2]["disparos_enemigos"])
-        return mensaje
+        print("\n-----Mis barcos: \n", mensaje[1]["mis_barcos"])
+        print("\n-----Disparos enemigos: \n", mensaje[1]["disparos_enemigos"])
+        print("\n-----Mis disparos: \n", mensaje[2]["disparos_enemigos"])
+        print("++++++++++++++++++++++++++++++++++++++++++")
+        # return mensaje
 
     
     # threading.Thread(target=enviar, args=(s,)).start()
@@ -91,6 +69,30 @@ def recibir(s):
     pass
 
 
+def main():
+    args = argumentos()
+
+
+    s = abrir_socket(args)
+    threading.Thread(target=recibir, args=(s,)).start()
+    threading.Thread(target=enviar, args=(s,)).start()
+    
+    
+    # s=""
+    # gui(s)   
+
+
+
+
+
+
+def salir(r):
+    r.destroy()
+    r.quit()
+    # y cerrar la conexion
+    pass
+
+
 def crear_cuadricula(tablero):
     
     y_tablero = -1  # Para el tag
@@ -99,20 +101,19 @@ def crear_cuadricula(tablero):
     for x in range(0,352,32):   # Cada 32 pixeles se hace un rectangulo (352 / 11 = 32)
         for y in range(0,352,32):
             tablero.create_rectangle(x,y,x+32, y+32, fill='gray15', tags="#{}{}".format(y_tablero,x_tablero), )
-            print("#{}{}".format(y_tablero,x_tablero))
             
             y_tablero += 1
         y_tablero = -1
         x_tablero += 1
 
 
+def barco(tablero):
+    print(tablero.itemcget("#99", "fill"))      # Devuelve el valor de la configuracion
+    tablero.itemconfig("#99", fill="blue")      # Cambia la configuracion del elemento
+
 def on_board_click(event):
     #! Esto deberia esperar a que lleguen los barcos del lado del server
-    #! Luego de seleccionar un casillero, no se deberia poder seleccionar otro hasta que llegue de nuevo la respuesta del server (punto de encuentro?)
-
-    # global pe
-    
-    # pe.wait()
+    #! Luego de seleccionar un casillero, no se deberia poder seleccionar otro hasta que llegue de nuevo la respuesta del server (punto de encuentro?: no funciona porque congela el main)
 
     if event.widget.find_withtag(tkinter.CURRENT):
         print(event.widget.itemcget(tkinter.CURRENT, "tag")[1:4])       # Obtener el tag
@@ -132,18 +133,11 @@ def indices_tablero(tablero):
         y += 1
 
 
-
-def leer_click(tablero):
-    print(threading.get_native_id())
-    tablero.bind("<Button-1>", on_board_click)     #TODO Revisar como funciona biente esto
-    
-
 def barcos_tableros(tablero1, tablero2, s):
     mensaje = recibir(s)
-    
-    jugador = str(mensaje[0])
-    mis_barcos = mensaje[1]["mis_barcos"]
 
+    #T* Tablero 1
+    mis_barcos = mensaje[1]["mis_barcos"]
     x_tabla = 0
     y_tabla = 0
     for y_gui in range(32,352,32):
@@ -153,19 +147,30 @@ def barcos_tableros(tablero1, tablero2, s):
         x_tabla = 0    
         y_tabla += 1
     
+    #T* Tablero 2
+    mis_disparos = mensaje[2]["disparos_enemigos"]
+    x_tabla = 0
+    y_tabla = 0
+    for y_gui in range(32,352,32):
+        for x_gui in range(32,352,32):
+            tablero2.create_text(16+x_gui,16+y_gui, text=mis_disparos.iloc[y_tabla, x_tabla][0], fill='red2', font = ('Arial', 18), tag="##{}{}".format(y_tabla+1, x_tabla+1))        
+            x_tabla += 1
+        x_tabla = 0    
+        y_tabla += 1
     
+    
+    jugador = str(mensaje[0])
     if "1" == jugador:
         #! Si es jugador 1 no deberia esperar, sino directamente enviar el disparo.
         pass
         
     elif "2" == jugador:
         #! Si es jugador 2, tiene que esperar al disparo del jugador 1.
-        global pe
-        pe.wait()
+        pass
 
 
 def gui(s):
-    
+    print("gui", os.getpid())
     #T* Pantalla
     raiz = tkinter.Tk()
     raiz.title("Batalla Naval")
@@ -207,8 +212,7 @@ def gui(s):
     tablero2.grid(row=1, column=1, padx=5, pady=5)
     crear_cuadricula(tablero2)
     
-    threading.Thread(target=leer_click, args=(tablero2,)).start()
-    
+    tablero2.bind("<Button-1>", on_board_click)     #TODO Revisar como funciona biente esto
     
     boton = tkinter.Button(frame_titulo, text="Barco", bg='orange', command=functools.partial(barco, tablero1))
     boton.grid(row=0, column=1)

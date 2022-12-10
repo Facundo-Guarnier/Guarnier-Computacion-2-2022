@@ -1,7 +1,5 @@
 import threading, os
 
-def caca():
-    print(threading.get_native_id())
+a = "aaaaa"
 
-threading.Thread(target=caca).start()
-print("padre",os.getpid())
+print(a.upper())

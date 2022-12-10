@@ -3,13 +3,15 @@ import pandas as pd
 
 # https://stackoverflow.com/questions/3991104/very-large-input-and-piping-using-subprocess-popen
 
-
+#! [msg, tablero1, tablero2]
 def enviar_mensaje(s, m):
+    # print("Mensaje enviado:",m)
     s.send(pickle.dumps(m))
 
 
 def recibir_mensaje(s):
     mensaje = s.recv(10000) 
+    # print("Mensaje recibido:", mensaje)
     return pickle.loads(mensaje)
 
 
@@ -31,31 +33,28 @@ def jugador1(sock, q1, e1, pe):
     while True:
         #! Desde acá deberia empezar el jugador1
         msg1 = recibir_mensaje(sock)
-        
+                
         q1.put(msg1+", del j1")
         
         pe.wait()
         
-        
-        #! Desde acá deberia empezar el jugador2
         e1.wait()
         
-        msg2 = q1.get() #Mensaje desde el hilo 'Partida'
+        msg2 = q1.get() #Mensaje de si es Agua, Tocado o hundido
+        enviar_mensaje(sock, msg2)
         
+        #! Desde acá deberia empezar el jugador2
+        msg2 = q1.get() #Mensaje del ataque enemigo.
         e1.clear()
         
         enviar_mensaje(sock, msg2)
 
-        pass
 
 
 def jugador2(sock, q1, e1, pe):
     while True:
         #! Desde acá deberia empezar el jugador2
-        e1.wait()
-        
         msg2 = q1.get() #Mensaje desde el hilo 'Partida'
-        
         e1.clear()
         
         enviar_mensaje(sock, msg2)
@@ -66,6 +65,12 @@ def jugador2(sock, q1, e1, pe):
         q1.put(msg1+", del j2")
         
         pe.wait()
+        
+        e1.wait()
+        msg2 = q1.get() #Mensaje desde el hilo 'Partida'
+        enviar_mensaje(sock, msg2)
+        
+
 
 
 def argumentos():
@@ -271,7 +276,7 @@ def partida(jugadores):
 
         #! Desde acá deberia empezar el jugador1
         pe_jugador1.wait()
-        msg1 = q_jugador1.get()     # {estado:... , disparo:...}
+        msg1 = q_jugador1.get()
         
         #TODO Crear la tabla de los bacros
         # ...
@@ -279,12 +284,12 @@ def partida(jugadores):
         # ...
         msg1, tablero1, tablero2 = jugada(msg1, tablero1, tablero2)
         msg1 = msg1 + ", este mensaje fue procesado por el hilo 'Partida' :)"
-        q_jugador2.put(msg1)
+        q_jugador1.put([msg1, tablero1, tablero2])  #Mensaje de si es Agua, Tocado, Hundido 
+        q_jugador2.put([msg1, tablero2, tablero1])  #Mensaje al enemigo sobre el disparo.
         e_jugador1.set()
         
         
         #! Desde acá deberia empezar el jugador2
-        e_jugador2.set()
         pe_jugador2.wait()
         
         msg1 = q_jugador2.get()
@@ -292,15 +297,17 @@ def partida(jugadores):
         # ...
         # Procesar el mensaje del primer jugador.
         # ...
+        msg1, tablero2, tablero1 = jugada(msg1, tablero2, tablero1)
         msg1 = msg1 + ", este mensaje fue procesado por el hilo 'Partida' :)"
-        q_jugador1.put(msg1)
+        q_jugador2.put([msg1, tablero2, tablero1])  #Mensaje de si es Agua, Tocado, Hundido 
+        q_jugador1.put([msg1, tablero1, tablero2])  #Mensaje al enemigo sobre el disparo.
+        e_jugador2.set()
         
         pass
 
 
 #! Procesamiento del disparo
 def jugada(msg, tablero1, tablero2):
-    # msg: {estado:... , disparo:...}
     # tablero: {disparos_enemigos:... , mis_barcos:..., cant_hundidos:...}
     
     codificacion = str.maketrans(
@@ -354,8 +361,8 @@ def es_hundido(fila, columna, tablero2):
     tipo_barco = tablero2["mis_barcos"].iloc[fila, columna]
     tamaño_barco = 0
     tamaño_tocado = 0
-    #! Barcos horizontales
-    if "1" in tipo_barco:
+    #! Barcos verticales
+    if "2" in tipo_barco:
         for x in range(10):
             if tablero2["mis_barcos"].iloc[x, columna] == tipo_barco:
                 tamaño_barco += 1
@@ -363,7 +370,7 @@ def es_hundido(fila, columna, tablero2):
                     tamaño_tocado += 1
         return tamaño_barco == tamaño_tocado
 
-    #! Barcos verticales
+    #! Barcos horizontales
     else :
         for y in range(10):
             if tablero2["mis_barcos"].iloc[fila, y] == tipo_barco:
@@ -477,3 +484,7 @@ if __name__ == '__main__':
 # Intenté utilizar otros modulos (decode, json, marshal) pero no son compatibles con los tipos de datos que utilizo en la app. 
 
 #* Por ahora voy a usar el pickle ya que es compatible con todos los tipos de datos pero no podré enviar multiples mensajes si no son consumidos al intante. 
+
+# Que vuelva a jugar el mismo jugador cuando el disparo es en un lugar que ya disparó. 
+# Condiciones de fin de la partida cuando se hunden todos los barcos.
+# TODO LAS CONDICIONES DE PARTIDA ESTAB JOYA :)
