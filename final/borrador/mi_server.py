@@ -392,10 +392,10 @@ def tipo_barco(letra):
 def online(server):
     print("  Proceso 'Online' ID:", os.getpid())
     
-    semaforo = threading.Semaphore(3)   #Soporta 3 productos del productor (como si fuece un buffer de 3 o que mi recurso soporta 3 instancias)
-    candado = threading.Lock()  # Seccion critica, inicia en abierto (creo que es como un semanforo pero inicializado en 1), se suele trabajar con "with candado: ...".
-    barrera = threading.Barrier(3)  #Es un punto de encuentro de 3 personas
-    q_dict = queue.Queue(maxsize=1)
+    # semaforo = threading.Semaphore(3)   #Soporta 3 productos del productor (como si fuece un buffer de 3 o que mi recurso soporta 3 instancias)
+    # candado = threading.Lock()  # Seccion critica, inicia en abierto (creo que es como un semanforo pero inicializado en 1), se suele trabajar con "with candado: ...".
+    # barrera = threading.Barrier(3)  #Es un punto de encuentro de 3 personas
+    # q_dict = queue.Queue(maxsize=1)
 
     global clientes
     clientes = {}
