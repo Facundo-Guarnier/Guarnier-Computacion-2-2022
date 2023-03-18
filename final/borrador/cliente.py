@@ -1,10 +1,11 @@
-import socket, argparse, threading, os, time, pickle
+import socket, argparse, threading, os, datetime, pickle, re
 import tkinter
 import functools
 from tkinter import ttk
 import pandas as pd
+import queue
 
-
+#! Solo la casilla (Ej: B1, J9)
 def enviar_mensaje(s, m):
     s.send(pickle.dumps(m))
 
@@ -16,9 +17,9 @@ def recibir_mensaje(s):
 
 def argumentos():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", type=int, required=False, help="port", default= 5000)
-    parser.add_argument("-d", required=False, help="direccion", default= "0.0.0.0")
-    parser.add_argument("-i", type=str, required=True, help="Activar GUI", choices=["y", "n"], default="n")
+    parser.add_argument("-p", type=int, required=False, help="Puerto", default= 5000)
+    parser.add_argument("-d", required=False, help="Direccion IPv4", default= "0.0.0.0")
+    parser.add_argument("-i", type=str, required=False, help="Activar GUI", choices=["y", "n"], default="n")
     
     return parser.parse_args()
 
@@ -46,7 +47,14 @@ def borrarPantalla():
 
 
 def enviar(s):
-    msg1 = input("[ Cliente ] ")
+    er = r'[A-J][0-9]$'   #! Expresion regular para las coordenadas.
+
+    while True:
+        msg1 = input("[ Cliente {} ] Ingresa una cadena que empiece con una letra de la A a la J incluida y siga con un número del 0 al 9 incluido: ".format(datetime.datetime.now().strftime("%H:%M:%S"))).upper()
+        if re.match(er, msg1):
+            break
+        else:
+            print("[ Cliente {} ] Cadena inválida. Por favor, intenta nuevamente.".format(datetime.datetime.now().strftime("%H:%M:%S")))
     enviar_mensaje(s, msg1)
 
 
@@ -145,14 +153,22 @@ def crear_cuadricula(tablero):
         x_tablero += 1
 
 
-def on_board_click(event):
-    #! Esto deberia esperar a que lleguen los barcos del lado del server
-    #! Luego de seleccionar un casillero, no se deberia poder seleccionar otro hasta que llegue de nuevo la respuesta del server (punto de encuentro?: no funciona porque congela el main)
+#! Esto es para que el bind quede en un hilo
+#TODO Hay que ver si esto es necesario 
+def on_board_click_wrapper(event,q1,e1):
+    threading.Thread(target=on_board_click, args=(event,q1,e1)).start()
 
+
+#! Luego de seleccionar un casillero, no se deberia poder seleccionar otro hasta que llegue de nuevo la respuesta del server (punto de encuentro?: no funciona porque congela el main)
+def on_board_click(event,q1,e1):
+    print("AFUERA DEL IF")
+    e1.wait()   #! Espera a que lo habiliten a hacer click.
+                #TODO no se si el wait va dentro o fuera del if.
+    
     if event.widget.find_withtag(tkinter.CURRENT):
-        # print("TAG del casillero", event.widget.itemcget(tkinter.CURRENT, "tag")[1:4])       #! Obtener el tag        
-        print("TAG del casillero: ", event.widget.itemcget(tkinter.CURRENT, "tag"))       #! Obtener el tag        
-        # event.widget.itemconfig(tkinter.CURRENT, fill="blue")
+        print("DENTRO DEL IF")
+        print("TAG del casillero: ", event.widget.itemcget(tkinter.CURRENT, "tag"))   #! Obtener el tag      
+        q1.put(event.widget.itemcget(tkinter.CURRENT, "tag"))   #! Envia el tag al hilo de enviar/recibir.  
 
 
 def encabezado_tablero(tablero):
@@ -168,7 +184,7 @@ def encabezado_tablero(tablero):
         y += 1
 
 
-def barcos_tableros(tablero1, tablero2, s):
+def barcos_tableros(tablero1, tablero2, s, q1, e1):
     mensaje = recibir_mensaje(s)
 
     #T* Tablero 1
@@ -199,11 +215,24 @@ def barcos_tableros(tablero1, tablero2, s):
 
     jugador = str(mensaje[0])
     if "1" == jugador:
-        #! Si es jugador 1 no deberia esperar, sino directamente enviar el disparo.
-        pass
         
+        #? COMO SE CUANDO TENGO QUE ATACAR O CUANDO TENGO QUE ESPERAR A SER ATACADO?? EL SERVER DEBERIA MANDAR UN TIPO DE SEÑAL, YA QUE 
+        #? NO NECEASRIAMENTE SIEMPRE VA A SEGUIR UN ORDEN EN ESPECIDICO: 
+        #?   1°: ATACO -> RECIBO ESTADO DE MI ACATQUE -> RECIBO ESTADO DEL ATAQUE HACIA MI
+        #?   2°: ATACO -> RECIBO QUE INGRESÉ MAL LAS COORDENADAS -> VUELVO A INGRESAR MAL LAS COORDENADAS -> ETC.
+        
+        #* Si es jugador 1 no deberia esperar, sino directamente enviar el disparo.
+        print("+++++++++++++++++++++++++++++++++++++++++++++ Jugador 1 +++++++++++++++++++++++++++++++++++++++++++++")
+        while True:
+            e1.set()    #! Habilitar la posibilidad de hacer click.
+            #* Se deberia quedar esperando a que se haga click
+            msg = q1.get()    #! Leer el click.
+            enviar_mensaje(s, msg)
+            
+    
     elif "2" == jugador:
-        #! Si es jugador 2, tiene que esperar al disparo del jugador 1.
+        print("+++++++++++++++++++++++++++++++++++++++++++++ Jugador 2 +++++++++++++++++++++++++++++++++++++++++++++")
+        #* Si es jugador 2, tiene que esperar al disparo del jugador 1.
         pass
 
 
@@ -250,13 +279,30 @@ def gui(s):
     
     
     #T* Funcion de click en el tablero para disparar/atacar
-    tablero2.bind("<Button-1>", on_board_click)     #TODO Revisar como funciona biente esto, <Button-1> es clic izquierdo    
+    q1 = queue.Queue()      #! Para enviar el click con el evniar/recibir.
+    e1 = threading.Event()  #! Para no estar haciendo click cuando no se debe.
+    
+    #TODO Revisar como funciona biente esto, <Button-1> es clic izquierdo.
+    # tablero2.bind("<Button-1>", on_board_click_wrapper)
+    tablero2.bind("<Button-1>", lambda event: on_board_click_wrapper(event, q1, e1))
+    """
+        En esta línea de código, se está asignando una función anónima (lambda) como controlador de eventos para el 
+        evento "Button-1" del widget "tablero2". Esta función anónima llama a la función "on_board_click" pasando 
+        como argumentos el objeto evento "event" y la variable "cola".
+
+        La función lambda es una forma de crear una función pequeña y anónima que puede ser útil en situaciones donde 
+        se necesita una función temporal. En este caso, se utiliza para encapsular la llamada a la función 
+        "on_board_click" junto con la variable "cola", para poder pasar ambos argumentos al controlador de eventos 
+        sin tener que declarar una función separada.
+    """
+    
+    
 
     
     #T* Contenido tablero
     encabezado_tablero(tablero1)
     encabezado_tablero(tablero2)
-    threading.Thread(target=barcos_tableros, args=(tablero1, tablero2, s)).start()
+    threading.Thread(target=barcos_tableros, args=(tablero1, tablero2, s, q1, e1)).start()
     
     raiz.mainloop()     #! Siempre al final
 
@@ -271,6 +317,8 @@ if __name__ == '__main__':
 # tablero.itemconfig("#99", fill="blue")      #! Cambia la configuracion del elemento
 
 # TODO
+# Ver lo que está en rojo en la funcion "barcos_tableros".
+
 # Como comunicar la funcion "on_board_click" con la de "barcos_tableros" para saber cuando 
 # puedo hacer click y cuando no, por cuestion de turnos.
 

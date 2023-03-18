@@ -108,9 +108,12 @@ def aceptar_cliente(server):
         print("  Nuevo cliente {}". format(addr))
         print("  Proceso padre ID:", os.getpid())
         
-        q1 = queue.Queue(maxsize=1)
-        e1 = threading.Event()      # Predeterminado es falso
-        pe = threading.Barrier(2)
+        q1 = queue.Queue(maxsize=1)     #! Cola de elementos, es de tipo FIFO. Se está limitando a 1 elemento. 
+        e1 = threading.Event()          #! Predeterminado es falso. Señala cuando se a producido un evento (un cambio de estado en el programa).
+        pe = threading.Barrier(2)       #! Punto de encuentro de hilos, se detienen hasta que lleguen los necesarios (2 en este caso) a la barrera.
+        # s1 = threading.Semaphore(3)   #! Contador de un numero limitado de recursos (seccion critica). Es este caso, hay 3 recursos disponibles.
+        # l1 = threading.Lock()         #! Protege una seccion critica, inicia en abierto. Es un caso particular de Semaphore inicializado en 1.
+
         # nickname = recibir_mensaje(s2)
         nickname = "Jugador" + str(addr[1])
         
@@ -398,10 +401,6 @@ def tipo_barco(letra):
 def online(server):
     print("  Proceso 'Online' ID:", os.getpid())
     
-    # semaforo = threading.Semaphore(3)   #Soporta 3 productos del productor (como si fuece un buffer de 3 o que mi recurso soporta 3 instancias)
-    # candado = threading.Lock()  # Seccion critica, inicia en abierto (creo que es como un semanforo pero inicializado en 1), se suele trabajar con "with candado: ...".
-    # barrera = threading.Barrier(3)  #Es un punto de encuentro de 3 personas
-    # q_dict = queue.Queue(maxsize=1)
 
     global clientes
     clientes = {}
@@ -421,7 +420,7 @@ def online(server):
         
         
         if len(jugadores_espera) >= 2:
-            print("++++++++++++++++++++ Se pudo establecer una partida ++++++++++++++++++++")
+            print("++++++++++++++++++++ Se establecio una partida ++++++++++++++++++++")
             threading.Thread(target=partida, args=(jugadores_espera,)).start()
 
             for clave in jugadores_espera.keys():
@@ -465,25 +464,30 @@ if __name__ == '__main__':
     main()
 
 
-#TODO:
-# Separar los barcos un lugar a los costados, no se pueden estar tocando.
-# Cambiar los diccionarios por clases.
-# ¿Como borrar un cliente que se desconectó con "ctrl + c"?
-# Poner una seccion critica a las variables globales
-#//  Ver como matar al proceso "online" cuando muere el main. Señal de ctrl + c para que tambien se la envíe al hijo. 
-# Seccion critica??? En todo los lugares en que esté un q1 y e1.
-# Ver si se puede con IPv4 y v6
-# Estudiar las diferencias entre threading.Lock(), threading.RLock(), threading.Barrier(3), threading.Semaphore(), threading.BoundedSemaphore(), threading.Condition(), event y otros
-# Cerrar una conexxion: s2.close()
-
-
-#T* Problema: 
-# Al momento de deserializar el recv, el pickle.loads() solo tiene en cuenta el primer mensaje, el resto de los mismos 
-# son ignorados. El funcionamiento del server es correcto, ya que si llegan los multiples mensajes serializados (print(mensaje)).
-# Intenté utilizar otros modulos (decode, json, marshal) pero no son compatibles con los tipos de datos que utilizo en la app. 
-
-#* Por ahora voy a usar el pickle ya que es compatible con todos los tipos de datos pero no podré enviar multiples mensajes si no son consumidos al intante. 
+#TODO: En orden de prioridades.
+# Condiciones de fin de la partida cuando se hunden todos los barcos.
 
 # Que vuelva a jugar el mismo jugador cuando el disparo es en un lugar que ya disparó. 
-# Condiciones de fin de la partida cuando se hunden todos los barcos.
-# TODO LAS CONDICIONES DE PARTIDA ESTAB JOYA :)
+
+# Volver a dar el turno al jugador que se equivocó de coordenas (mal escritas). Esto deberia ser por lado del server y no del cliente. Hay una solucion propuesta desde el lado del cliente.
+
+# El click del GUI quedó a medio camino.
+
+# Como cerramos las conexiones
+
+# Separar los barcos un lugar a los costados, no se pueden estar tocando.
+
+# Ver si se puede con IPv4 y v6
+
+# Usar MongoBD  
+
+# Cambiar los diccionarios por clases.
+
+# ¿Como borrar un cliente que se desconectó con "ctrl + c"?
+
+# Poner una seccion critica a las variables globales
+# Seccion critica??? En todo los lugares en que esté un q1 y e1.
+
+# Investigar threading.RLock(), threading.BoundedSemaphore(), threading.Condition().
+
+#//  Ver como matar al proceso "online" cuando muere el main. Señal de ctrl + c para que tambien se la envíe al hijo. 
