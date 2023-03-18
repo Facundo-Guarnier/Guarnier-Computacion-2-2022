@@ -1,41 +1,31 @@
 import tkinter as tk
-from tkinter import ttk
 import pandas as pd
 
 # Creamos un DataFrame de ejemplo
-data = {'Nombre': ['Juan', 'Ana', 'Carlos', 'María'],
-        'Edad': [25, 30, 40, 35],
-        'País': ['México', 'España', 'Argentina', 'Colombia']}
+data = {'Nombre': ['Juan', 'María', 'Pedro'], 'Edad': [25, 30, 35], 'Ciudad': ['Madrid', 'Barcelona', 'Valencia']}
 df = pd.DataFrame(data)
 
-# Función para manejar el evento de clic en la tabla
-def on_click(event):
-    row = (table.identify_row(event.y))  # Obtenemos la fila donde se hizo clic
-    col = (table.identify_column(event.x))  # Obtenemos la columna donde se hizo clic
-    print("Se hizo clic en la celda ({}, {})".format(row, col))
-
-# Creamos la aplicación de tkinter
+# Creamos la ventana principal
 root = tk.Tk()
-root.title('Tabla de datos')
+root.geometry('600x400')
 
-# Creamos el widget Table
-table = ttk.Treeview(root)
-table['columns'] = list(df.columns)
-table['show'] = 'headings'
+# Creamos un canvas para colocar la tabla
+canvas = tk.Canvas(root, bg='black')
+canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
 
-# Agregamos las columnas a la tabla
-for column in table['columns']:
-    table.heading(column, text=column)
+# Creamos un frame para contener la tabla
+frame = tk.Frame(canvas, bg='red')
+canvas.create_window((0,0), window=frame, anchor='nw')
 
-# Agregamos las filas a la tabla
-for index, row in df.iterrows():
-    table.insert('', 'end', values=list(row))
+# Creamos una etiqueta para cada celda en el DataFrame
+for i, row in df.iterrows():
+    for j, value in enumerate(row):
+        label = tk.Label(frame, text=value)
+        label.grid(row=i, column=j)
+        label.bind('<Button-1>', lambda event, row=i, col=j: print(f'Fila {row}, Columna {col}'))
+        label.bindtags((label, frame, canvas, 'all'))
 
-# Asociamos la función on_click al evento Button-1 (clic izquierdo) en la tabla
-table.bind("<Button-1>", on_click)
 
-# Empaquetamos la tabla en la ventana
-table.pack()
 
-# Ejecutamos la aplicación de tkinter
+
 root.mainloop()

@@ -1,6 +1,7 @@
 import socket, argparse, threading, os, time, pickle
 import tkinter
 import functools
+from tkinter import ttk
 import pandas as pd
 
 
@@ -111,6 +112,19 @@ def main():
 
 #*-------------------------------------------------- GUI --------------------------------------------------
 
+
+# "0":["A","B","C","D","E","F","G","H","I","J"],
+# "1":[" "," "," "," "," "," "," "," "," "," "],
+# "2":[" "," "," "," "," "," "," "," "," "," "],
+# "3":[" "," "," "," "," "," "," "," "," "," "],
+# "4":[" "," "," "," "," "," "," "," "," "," "],
+# "5":[" "," "," "," "," "," "," "," "," "," "],
+# "6":[" "," "," "," "," "," "," "," "," "," "],
+# "7":[" "," "," "," "," "," "," "," "," "," "],
+# "8":[" "," "," "," "," "," "," "," "," "," "],
+# "9":[" "," "," "," "," "," "," "," "," "," "],
+
+
 def salir(r):
     r.destroy()
     r.quit()
@@ -124,17 +138,11 @@ def crear_cuadricula(tablero):
     
     for x in range(0,352,32):   # Cada 32 pixeles se hace un rectangulo (352 / 11 = 32)
         for y in range(0,352,32):
-            tablero.create_rectangle(x,y,x+32, y+32, fill='gray15', tags="#{}{}".format(y_tablero,x_tablero), )
-            
+            #! Los rectangulos tienen el mismo tag que los textos, para poder hacer click.
+            tablero.create_rectangle(x,y,x+32, y+32, fill='gray15', tags="REC -> Fila: {}, Columna: {}".format(y_tablero,x_tablero))
             y_tablero += 1
         y_tablero = -1
         x_tablero += 1
-
-
-#! Prueba
-def barco(tablero):
-    print(tablero.itemcget("#99", "fill"))      # Devuelve el valor de la configuracion
-    tablero.itemconfig("#99", fill="blue")      # Cambia la configuracion del elemento
 
 
 def on_board_click(event):
@@ -142,11 +150,12 @@ def on_board_click(event):
     #! Luego de seleccionar un casillero, no se deberia poder seleccionar otro hasta que llegue de nuevo la respuesta del server (punto de encuentro?: no funciona porque congela el main)
 
     if event.widget.find_withtag(tkinter.CURRENT):
-        print("TAG del casillero", event.widget.itemcget(tkinter.CURRENT, "tag")[1:4])       #! Obtener el tag        
-        event.widget.itemconfig(tkinter.CURRENT, fill="blue")
+        # print("TAG del casillero", event.widget.itemcget(tkinter.CURRENT, "tag")[1:4])       #! Obtener el tag        
+        print("TAG del casillero", event.widget.itemcget(tkinter.CURRENT, "tag"))       #! Obtener el tag        
+        # event.widget.itemconfig(tkinter.CURRENT, fill="blue")
 
 
-def indices_tablero(tablero):
+def encabezado_tablero(tablero):
     x = 0
     for x_gui in range(32,352,32):
         tablero.create_text(16+x_gui, 16, text=x, fill='white', font = ('Arial', 18), tag="Columna {}".format(x))        
@@ -160,7 +169,7 @@ def indices_tablero(tablero):
 
 
 def barcos_tableros(tablero1, tablero2, s):
-    mensaje = recibir(s)
+    mensaje = recibir_mensaje(s)
 
     #T* Tablero 1
     mis_barcos = mensaje[1]["mis_barcos"]
@@ -168,10 +177,12 @@ def barcos_tableros(tablero1, tablero2, s):
     y_tabla = 0
     for y_gui in range(32,352,32):
         for x_gui in range(32,352,32):
-            tablero1.create_text(16+x_gui,16+y_gui, text=mis_barcos.iloc[y_tabla, x_tabla][0], fill='red2', font = ('Arial', 18), tag="##{}{}".format(y_tabla+1, x_tabla+1))        
+            #! Los textos tienen el mismo tag que los rectangulos, para poder hacer click.
+            tablero1.create_text(16+x_gui,16+y_gui, text=mis_barcos.iloc[y_tabla, x_tabla][0], fill='red2', font = ('Arial', 18), tag="TEXT -> Fila {}, Columna {}.".format(y_tabla+1, x_tabla+1))        
             x_tabla += 1
         x_tabla = 0    
         y_tabla += 1
+    
     
     #T* Tablero 2
     mis_disparos = mensaje[2]["disparos_enemigos"]
@@ -179,12 +190,13 @@ def barcos_tableros(tablero1, tablero2, s):
     y_tabla = 0
     for y_gui in range(32,352,32):
         for x_gui in range(32,352,32):
-            tablero2.create_text(16+x_gui,16+y_gui, text=mis_disparos.iloc[y_tabla, x_tabla][0], fill='red2', font = ('Arial', 18), tag="##{}{}".format(y_tabla+1, x_tabla+1))        
+            #! Los textos tienen el mismo tag que los rectangulos, para poder hacer click.
+            tablero2.create_text(16+x_gui,16+y_gui, text=mis_disparos.iloc[y_tabla, x_tabla][0], fill='red2', font = ('Arial', 18), tag="TEXT -> Fila {}, Columna {}.".format(y_tabla+1, x_tabla+1))        
             x_tabla += 1
         x_tabla = 0    
         y_tabla += 1
-    
-    
+
+
     jugador = str(mensaje[0])
     if "1" == jugador:
         #! Si es jugador 1 no deberia esperar, sino directamente enviar el disparo.
@@ -204,24 +216,21 @@ def gui(s):
 
     frame_principal = tkinter.Frame(raiz, width=800, height=600)
     frame_principal.pack()
-    
-    #T* Variables
-    disparo = tkinter.StringVar()
 
 
     #T* Titulo
     frame_titulo = tkinter.Frame(frame_principal, width=800, height=50, bg="black")
     frame_titulo.grid(row=0, column=0)
-    frame_titulo.grid_propagate(False)   #No ajusta el tamaño del freame al contenido
+    # frame_titulo.grid_propagate(False)   #! No ajusta el tamaño del freame al contenido
 
     b_salir = tkinter.Button(frame_titulo, text="Salir", bg='orange', command=functools.partial(salir, raiz))
     b_salir.grid(row=0, column=0)
     
 
-    #T* Tableros
+    #T* Frame para cada tableros
     frame_tableros = tkinter.Frame(frame_principal, width=800, height=550, bg="green")
     frame_tableros.grid(row=1, column=0)
-    frame_tableros.grid_propagate(False)   #No ajusta el tamaño del freame al contenido
+    frame_tableros.grid_propagate(False)   #! No ajusta el tamaño del freame al contenido
 
     titulo1 = tkinter.Label(frame_tableros, text="Tablero 1:", font=("Arial", 18), padx=5, pady=5)
     titulo1.grid(row=0, column=0, padx=5, pady=5)
@@ -229,37 +238,40 @@ def gui(s):
     titulo1 = tkinter.Label(frame_tableros, text="Tablero 2:", font=("Arial", 18), padx=5, pady=5)
     titulo1.grid(row=0, column=1, padx=5, pady=5)
 
-
+    #! Tablero 1
     tablero1 = tkinter.Canvas(frame_tableros, bg='black', width=352, height=352)
     tablero1.grid(row=1, column=0, padx=5, pady=5)    
     crear_cuadricula(tablero1)
     
+    #! Tablero 2
     tablero2 = tkinter.Canvas(frame_tableros, bg='black', width=352, height=352)
     tablero2.grid(row=1, column=1, padx=5, pady=5)
     crear_cuadricula(tablero2)
     
-    tablero2.bind("<Button-1>", on_board_click)     #TODO Revisar como funciona biente esto
     
-    boton = tkinter.Button(frame_titulo, text="Barco", bg='orange', command=functools.partial(barco, tablero1))
-    boton.grid(row=0, column=1)
-    
-
-    #T* Cuadro disparo
-    cuadro_disparo = tkinter.Entry(frame_titulo, textvariable=disparo, fg="red", justify="right")
-    cuadro_disparo.grid(row=0, column=2, )
+    #T* Funcion de click en el tablero para disparar/atacar
+    tablero2.bind("<Button-1>", on_board_click)     #TODO Revisar como funciona biente esto, <Button-1> es clic izquierdo    
 
     
     #T* Contenido tablero
-    indices_tablero(tablero1)
-    indices_tablero(tablero2)
+    encabezado_tablero(tablero1)
+    encabezado_tablero(tablero2)
     threading.Thread(target=barcos_tableros, args=(tablero1, tablero2, s)).start()
     
-    raiz.mainloop()     # Siempre al final
-
+    raiz.mainloop()     #! Siempre al final
 
 
 if __name__ == '__main__':
     main()
-    
-#TODO
-# ya obtuve el tag de cada casillero (func: on_board_click), ahora se lo tengo que enviar al server como disparo
+
+#* Info
+# print(tablero.itemcget("#99", "fill"))      #! Devuelve el valor de la configuracion
+# tablero.itemconfig("#99", fill="blue")      #! Cambia la configuracion del elemento
+
+# TODO
+# Como comunicar la funcion "on_board_click" con la de "barcos_tableros" para saber cuando 
+# puedo hacer click y cuando no, por cuestion de turnos.
+
+#// El problema de los tag al hacer click seguramente se debe a que el espacio en blaco 
+#// del Dataframe tiene otro tag que el del rectangulo donde este se encuentra.
+
