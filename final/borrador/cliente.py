@@ -17,6 +17,8 @@ def argumentos():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, required=False, help="port", default= 5000)
     parser.add_argument("-d", required=False, help="direccion", default= "0.0.0.0")
+    parser.add_argument("-i", type=str, required=True, help="Activar GUI", choices=["y", "n"], default="n")
+    
     return parser.parse_args()
 
 
@@ -43,58 +45,80 @@ def borrarPantalla():
 
 
 def enviar(s):
-    while True:
-        msg1 = input("[ Cliente ] ")
-        enviar_mensaje(s, msg1)
+    msg1 = input("[ Cliente ] ")
+    enviar_mensaje(s, msg1)
 
 
-#! [msg1, tablero1, tablero2]
 def recibir(s):
-    while True:
-        mensaje = recibir_mensaje(s)
-        print("[ Server ]", mensaje[0] )
-        print("\n-----Mis barcos: \n", mensaje[1]["mis_barcos"])
-        print("\n-----Disparos enemigos: \n", mensaje[1]["disparos_enemigos"])
-        print("\n-----Mis disparos: \n", mensaje[2]["disparos_enemigos"])
-        print("++++++++++++++++++++++++++++++++++++++++++")
-        # return mensaje
-
-    
-    # threading.Thread(target=enviar, args=(s,)).start()
-
-    # while True:
-    #     msg2 = recibir_mensaje(s)
-    #     borrarPantalla()
-    #     print("[ Server ]", msg2)
-    pass
+# [msg1, tablero1, tablero2]
+    mensaje = recibir_mensaje(s)
+    print("[ Server ]", mensaje[0] )    #!Mensaje al jugador
+    print("\n-----Mis barcos: \n", mensaje[1]["mis_barcos"])
+    print("\n-----Disparos enemigos: \n", mensaje[1]["disparos_enemigos"])
+    print("\n-----Mis disparos: \n", mensaje[2]["disparos_enemigos"])
+    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
+    return mensaje
 
 
 def main():
     args = argumentos()
 
-
     s = abrir_socket(args)
-    threading.Thread(target=recibir, args=(s,)).start()
-    threading.Thread(target=enviar, args=(s,)).start()
     
     
-    # s=""
-    # gui(s)   
+    #! Sin interfaz grafica (GUI)
+    if args.i == "n":
+        mensaje = recibir(s)
+        
+        #! Sos el jugador 1
+        if mensaje[0] == "1":
+            while True:
+                #* Enviar
+                enviar(s)
+                
+                #* Recibir
+                #! Estado de mi actaque al enemigo
+                print("++ ESPERANDO RESPUESTA DEL SERVIDOR de mi ataque")
+                recibir(s)
+                
+                #! Estado del actaque enemigo
+                print("++ ESPERANDO RESPUESTA DEL SERVIDOR del ataque enemigo")
+                recibir(s)
+        
+        #! Sos el jugador 2
+        elif mensaje[0] == "2":
+            while True:
+                #* Recibir
+                #! Estado del actaque enemigo
+                print("++ ESPERANDO RESPUESTA DEL SERVIDOR del ataque enemigo")
+                recibir(s)
+        
+                #* Enviar
+                enviar(s)
+        
+                #* Recibir
+                #! Estado de mi actaque al enemigo
+                print("++ ESPERANDO RESPUESTA DEL SERVIDOR de mi ataque")
+                recibir(s)
 
+        else:
+            print("ERROR AL IDENTIFICAR JUGADOR (error-c1)")
+            
+    #! Con interfaz grafica (GUI)
+    elif args.i == "y":
+        # s=""
+        gui(s)   
 
-
-
-
+#*-------------------------------------------------- GUI --------------------------------------------------
 
 def salir(r):
     r.destroy()
     r.quit()
-    # y cerrar la conexion
+    #TODO y cerrar la conexion
     pass
 
 
 def crear_cuadricula(tablero):
-    
     y_tablero = -1  # Para el tag
     x_tablero = -1
     
@@ -107,29 +131,31 @@ def crear_cuadricula(tablero):
         x_tablero += 1
 
 
+#! Prueba
 def barco(tablero):
     print(tablero.itemcget("#99", "fill"))      # Devuelve el valor de la configuracion
     tablero.itemconfig("#99", fill="blue")      # Cambia la configuracion del elemento
+
 
 def on_board_click(event):
     #! Esto deberia esperar a que lleguen los barcos del lado del server
     #! Luego de seleccionar un casillero, no se deberia poder seleccionar otro hasta que llegue de nuevo la respuesta del server (punto de encuentro?: no funciona porque congela el main)
 
     if event.widget.find_withtag(tkinter.CURRENT):
-        print(event.widget.itemcget(tkinter.CURRENT, "tag")[1:4])       # Obtener el tag
+        print("TAG del casillero", event.widget.itemcget(tkinter.CURRENT, "tag")[1:4])       #! Obtener el tag        
         event.widget.itemconfig(tkinter.CURRENT, fill="blue")
 
 
 def indices_tablero(tablero):
     x = 0
     for x_gui in range(32,352,32):
-        tablero.create_text(16+x_gui, 16, text=x, fill='white', font = ('Arial', 18), tag="AAA")        
+        tablero.create_text(16+x_gui, 16, text=x, fill='white', font = ('Arial', 18), tag="Columna {}".format(x))        
         x += 1
         
     abc = "ABCDEFGHIJ"
     y = 0
     for y_gui in range(32,352,32):
-        tablero.create_text(16, 16+y_gui, text=abc[y], fill='white', font = ('Arial', 18), tag="AAA")        
+        tablero.create_text(16, 16+y_gui, text=abc[y], fill='white', font = ('Arial', 18), tag="Fila {}".format(abc[y]))        
         y += 1
 
 
@@ -170,7 +196,7 @@ def barcos_tableros(tablero1, tablero2, s):
 
 
 def gui(s):
-    print("gui", os.getpid())
+    print("PID gui: ", os.getpid())
     #T* Pantalla
     raiz = tkinter.Tk()
     raiz.title("Batalla Naval")
@@ -182,7 +208,7 @@ def gui(s):
     #T* Variables
     disparo = tkinter.StringVar()
 
-    
+
     #T* Titulo
     frame_titulo = tkinter.Frame(frame_principal, width=800, height=50, bg="black")
     frame_titulo.grid(row=0, column=0)
@@ -226,7 +252,7 @@ def gui(s):
     #T* Contenido tablero
     indices_tablero(tablero1)
     indices_tablero(tablero2)
-    # threading.Thread(target=barcos_tableros, args=(tablero1, tablero2, s)).start()
+    threading.Thread(target=barcos_tableros, args=(tablero1, tablero2, s)).start()
     
     raiz.mainloop()     # Siempre al final
 
@@ -236,4 +262,4 @@ if __name__ == '__main__':
     main()
     
 #TODO
-# ya obtuve el tag de cada casillero (linea 107), ahora se lo tengo que enviar al server como disparo
+# ya obtuve el tag de cada casillero (func: on_board_click), ahora se lo tengo que enviar al server como disparo

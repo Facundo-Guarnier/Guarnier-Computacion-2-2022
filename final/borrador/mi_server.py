@@ -69,7 +69,6 @@ def jugador2(sock, q1, e1, pe):
         e1.wait()
         msg2 = q1.get() #Mensaje desde el hilo 'Partida'
         enviar_mensaje(sock, msg2)
-        
 
 
 
@@ -350,11 +349,11 @@ def jugada(msg, tablero1, tablero2):
                 return "Todos los barcos han sido hundidos!!!", tablero1, tablero2
         
             else:
-                return "HUNDIDO!! El disparo fue certero, hundiste a {}.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2
+                return "HUNDIDO!! El disparo fue certero, {} fuen hundido.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2
 
         #! Barco no hundido
         else:
-            return "TOCADO!! El disparo fue certero, le diste a {}.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2
+            return "TOCADO!! El disparo fue certero, {} afectado.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2
 
 
 def es_hundido(fila, columna, tablero2):
