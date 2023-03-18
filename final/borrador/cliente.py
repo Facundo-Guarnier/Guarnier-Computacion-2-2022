@@ -139,7 +139,7 @@ def crear_cuadricula(tablero):
     for x in range(0,352,32):   # Cada 32 pixeles se hace un rectangulo (352 / 11 = 32)
         for y in range(0,352,32):
             #! Los rectangulos tienen el mismo tag que los textos, para poder hacer click.
-            tablero.create_rectangle(x,y,x+32, y+32, fill='gray15', tags="REC -> Fila: {}, Columna: {}".format(y_tablero,x_tablero))
+            tablero.create_rectangle(x,y,x+32, y+32, fill='gray15', tags="{}{}".format(y_tablero,x_tablero))
             y_tablero += 1
         y_tablero = -1
         x_tablero += 1
@@ -151,7 +151,7 @@ def on_board_click(event):
 
     if event.widget.find_withtag(tkinter.CURRENT):
         # print("TAG del casillero", event.widget.itemcget(tkinter.CURRENT, "tag")[1:4])       #! Obtener el tag        
-        print("TAG del casillero", event.widget.itemcget(tkinter.CURRENT, "tag"))       #! Obtener el tag        
+        print("TAG del casillero: ", event.widget.itemcget(tkinter.CURRENT, "tag"))       #! Obtener el tag        
         # event.widget.itemconfig(tkinter.CURRENT, fill="blue")
 
 
@@ -178,7 +178,7 @@ def barcos_tableros(tablero1, tablero2, s):
     for y_gui in range(32,352,32):
         for x_gui in range(32,352,32):
             #! Los textos tienen el mismo tag que los rectangulos, para poder hacer click.
-            tablero1.create_text(16+x_gui,16+y_gui, text=mis_barcos.iloc[y_tabla, x_tabla][0], fill='red2', font = ('Arial', 18), tag="TEXT -> Fila {}, Columna {}.".format(y_tabla+1, x_tabla+1))        
+            tablero1.create_text(16+x_gui,16+y_gui, text=mis_barcos.iloc[y_tabla, x_tabla][0], fill='red2', font = ('Arial', 18), tag="{}{}".format(y_tabla, x_tabla))        
             x_tabla += 1
         x_tabla = 0    
         y_tabla += 1
@@ -191,7 +191,7 @@ def barcos_tableros(tablero1, tablero2, s):
     for y_gui in range(32,352,32):
         for x_gui in range(32,352,32):
             #! Los textos tienen el mismo tag que los rectangulos, para poder hacer click.
-            tablero2.create_text(16+x_gui,16+y_gui, text=mis_disparos.iloc[y_tabla, x_tabla][0], fill='red2', font = ('Arial', 18), tag="TEXT -> Fila {}, Columna {}.".format(y_tabla+1, x_tabla+1))        
+            tablero2.create_text(16+x_gui,16+y_gui, text=mis_disparos.iloc[y_tabla, x_tabla][0], fill='red2', font = ('Arial', 18), tag="{}{}".format(y_tabla, x_tabla))        
             x_tabla += 1
         x_tabla = 0    
         y_tabla += 1
@@ -264,6 +264,8 @@ def gui(s):
 if __name__ == '__main__':
     main()
 
+
+
 #* Info
 # print(tablero.itemcget("#99", "fill"))      #! Devuelve el valor de la configuracion
 # tablero.itemconfig("#99", fill="blue")      #! Cambia la configuracion del elemento
@@ -275,3 +277,4 @@ if __name__ == '__main__':
 #// El problema de los tag al hacer click seguramente se debe a que el espacio en blaco 
 #// del Dataframe tiene otro tag que el del rectangulo donde este se encuentra.
 
+# 
