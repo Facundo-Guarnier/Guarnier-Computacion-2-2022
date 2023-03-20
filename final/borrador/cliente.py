@@ -5,6 +5,9 @@ from tkinter import ttk
 import pandas as pd
 import queue
 
+def hora_actual():
+    return datetime.datetime.now().strftime("%H:%M:%S")
+
 #! Solo la casilla (Ej: B1, J9)
 def enviar_mensaje(s, m):
     s.send(pickle.dumps(m))
@@ -50,23 +53,24 @@ def enviar(s):
     er = r'[A-J][0-9]$'   #! Expresion regular para las coordenadas.
 
     while True:
-        msg1 = input("[ Cliente {} ] Ingresa una cadena que empiece con una letra de la A a la J incluida y siga con un número del 0 al 9 incluido: ".format(datetime.datetime.now().strftime("%H:%M:%S"))).upper()
+        msg1 = input("[ Cliente {} ] Coordenada: ".format(hora_actual())).upper()
         if re.match(er, msg1):
             break
         else:
-            print("[ Cliente {} ] Cadena inválida. Por favor, intenta nuevamente.".format(datetime.datetime.now().strftime("%H:%M:%S")))
+            print("[ Cliente {} ] Coordenada inválida.".format(hora_actual()))
+    
+
     enviar_mensaje(s, msg1)
 
 
-def recibir(s):
-# [msg1, tablero1, tablero2]
-    mensaje = recibir_mensaje(s)
-    print("[ Server ]", mensaje[0] )    #!Mensaje al jugador
+def print_mensaje(mensaje):
+#! [msg1, tablero1, tablero2, estado]
+    print("\n++++++++++++++++++++++++++++++++++++++++++++ PRINT ++++++++++++++++++++++++++++++++++++++++++++\n")
+    print("[ Server {} ]\n   Mensaje: {}\n   Estado: {}".format(hora_actual() , mensaje[0], mensaje[3]))    #!Mensaje al jugador
     print("\n-----Mis barcos: \n", mensaje[1]["mis_barcos"])
     print("\n-----Disparos enemigos: \n", mensaje[1]["disparos_enemigos"])
     print("\n-----Mis disparos: \n", mensaje[2]["disparos_enemigos"])
-    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
-    return mensaje
+    print("\n++++++++++++++++++++++++++++++++++++++++++++ PRINT ++++++++++++++++++++++++++++++++++++++++++++\n")
 
 
 def main():
@@ -74,41 +78,84 @@ def main():
 
     s = abrir_socket(args)
     
-    
-    #! Sin interfaz grafica (GUI)
-    if args.i == "n":
-        mensaje = recibir(s)
+    if args.i == "n":       #! Sin interfaz grafica (GUI)
+        print("Sin GUI")
+        mensaje = recibir_mensaje(s)        
+        print_mensaje(mensaje)
         
-        #! Sos el jugador 1
-        if mensaje[0] == "1":
-            while True:
-                #* Enviar
-                enviar(s)
+        if mensaje[3][0] == False:  #! Error en el server.
+            print("++++ ERROR EN EL SERVER ANTES DE SABER QUE JUGADOR SOS {}".format(mensaje[3][1]))
+        
+        elif mensaje[3][1] == "1":    
+            
+            while True:     #! Bucle del Jugador 1
                 
-                #* Recibir
-                #! Estado de mi actaque al enemigo
-                print("++ ESPERANDO RESPUESTA DEL SERVIDOR de mi ataque")
-                recibir(s)
+                while True:     #! Bucle si es que existe un error del server (ej: error-s1)
+                    enviar(s)   #! Envia las coordenadas ingresadas por el usuario.
+                    
+                    print("++ ESPERANDO RESPUESTA DEL SERVIDOR de mi ataque")
+                    respuesta = recibir_mensaje(s)  #! Estado de mi actaque al enemigo
+                    
+                    if respuesta[3][0]:    #! No existe error
+                        print("+++++++++++++++++++++ No hay error +++++++++++++++++++++")
+                        print_mensaje(respuesta)
+                        break
+                    
+                    else:       #! Existe error.
+                        print("+++++++++++++++++++++ Si hay error +++++++++++++++++++++")
+                        print_mensaje(respuesta)
+                    
+                    
+                #! Estado del actaque enemigo
+                while True:     #! Bucle si es que existe un error del server (ej: error-s1)
+                    print("++ ESPERANDO RESPUESTA DEL SERVIDOR del ataque enemigo")
+                    respuesta = recibir_mensaje(s)
+                    
+                    if respuesta[3][0]:    #! No existe error
+                        print("+++++++++++++++++++++ No hay error +++++++++++++++++++++")
+                        print_mensaje(respuesta)
+                        break
+                    
+                    else:       #! Existe error.
+                        print("+++++++++++++++++++++ Si hay error +++++++++++++++++++++")
+                        print_mensaje(respuesta)
+                        
+        
+
+        elif mensaje[3][1] == "2":  
+            while True:     #! Bucle del Jugador 2
                 
                 #! Estado del actaque enemigo
-                print("++ ESPERANDO RESPUESTA DEL SERVIDOR del ataque enemigo")
-                recibir(s)
-        
-        #! Sos el jugador 2
-        elif mensaje[0] == "2":
-            while True:
-                #* Recibir
-                #! Estado del actaque enemigo
-                print("++ ESPERANDO RESPUESTA DEL SERVIDOR del ataque enemigo")
-                recibir(s)
-        
-                #* Enviar
-                enviar(s)
-        
-                #* Recibir
-                #! Estado de mi actaque al enemigo
-                print("++ ESPERANDO RESPUESTA DEL SERVIDOR de mi ataque")
-                recibir(s)
+                while True:     #! Bucle si es que existe un error del server (ej: error-s1)
+                    print("++ ESPERANDO RESPUESTA DEL SERVIDOR del ataque enemigo")
+                    respuesta = recibir_mensaje(s)
+                    
+                    if respuesta[3][0]:    #! No existe error
+                        print("+++++++++++++++++++++ No hay error +++++++++++++++++++++")
+                        print_mensaje(respuesta)
+                        break
+                    
+                    else:       #! Existe error.
+                        print("+++++++++++++++++++++ Si hay error +++++++++++++++++++++")
+                        print_mensaje(respuesta)
+                        
+                        
+                while True:     #! Bucle si es que existe un error del server (ej: error-s1)
+                    enviar(s)   #! Envia las coordenadas ingresadas por el usuario.
+                    
+                    print("++ ESPERANDO RESPUESTA DEL SERVIDOR de mi ataque")
+                    respuesta = recibir_mensaje(s)  #! Estado de mi actaque al enemigo
+                    
+                    if respuesta[3][0]:    #! No existe error
+                        print("+++++++++++++++++++++ No hay error +++++++++++++++++++++")
+                        print_mensaje(respuesta)
+                        
+                        break
+                    
+                    else:       #! Existe error.
+                        print("+++++++++++++++++++++ Si hay error +++++++++++++++++++++")
+                        print_mensaje(respuesta)
+                    
 
         else:
             print("ERROR AL IDENTIFICAR JUGADOR (error-c1)")

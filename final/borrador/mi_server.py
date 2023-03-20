@@ -1,9 +1,9 @@
-import socket, threading, os, multiprocessing, argparse, queue, time, signal, random, pickle
+import socket, threading, os, multiprocessing, argparse, queue, time, signal, random, pickle, re
 import pandas as pd
 
 # https://stackoverflow.com/questions/3991104/very-large-input-and-piping-using-subprocess-popen
 
-#! [msg, tablero1, tablero2]
+#! [msg, tablero1, tablero2, estado]
 def enviar_mensaje(s, m):
     # print("Mensaje enviado:",m)
     s.send(pickle.dumps(m))
@@ -20,56 +20,78 @@ def cliente(sock, q1, e1, pe):
 
     mensaje = q1.get()
         
-    if "1" == mensaje[0]: 
+    if "1" == mensaje[3][1]: 
         enviar_mensaje(sock, mensaje)
         jugador1(sock, q1, e1, pe)
         
-    elif "2" == mensaje[0]:
+    elif "2" == mensaje[3][1]:
         enviar_mensaje(sock, mensaje)
         jugador2(sock, q1, e1, pe)
+    
+    else:
+        print("error-s8")
 
 
 def jugador1(sock, q1, e1, pe):
     while True:
-        #! Desde acá deberia empezar el jugador1
-        msg1 = recibir_mensaje(sock)
-                
-        q1.put(msg1+", del j1")
-        
-        pe.wait()
-        
-        e1.wait()
-        
-        msg2 = q1.get() #Mensaje de si es Agua, Tocado o hundido
-        enviar_mensaje(sock, msg2)
+        #! Empieza el jugador1
+        while True:     #! Bucle si es que existe un error en el estado.
+            msg1 = recibir_mensaje(sock)
+                    
+            q1.put(msg1+", del j1")     #* Pone el mensaje en la cola
+            
+            pe.wait()       #* Espera al hilo partida a que llegue al punto de encuentro (que ya pueda leer q1).
+            
+            e1.wait()       #* Espera a que suceda el evento (procesar el disparo y poner los resultados en q1).
+            e1.clear()
+            
+            msg2 = q1.get() #* Mensaje del resultado del disparo.
+            
+            enviar_mensaje(sock, msg2)
+            
+            if msg2[3][0]:          #! Sale del bucle porque no hay error en el estado.
+                break
+            
+            elif not(msg2[3][0]):   #! Existe error. 
+                print("hilo jugador1, existe error, me quedo en el bucle")    
+                pass
         
         #! Desde acá deberia empezar el jugador2
-        msg2 = q1.get() #Mensaje del ataque enemigo.
-        e1.clear()
-        
+        msg2 = q1.get()     #! Se queda esperando a que pueda conumir la respuesta al ataque del jugador 2 de la cola.
         enviar_mensaje(sock, msg2)
-
 
 
 def jugador2(sock, q1, e1, pe):
     while True:
-        #! Desde acá deberia empezar el jugador2
-        msg2 = q1.get() #Mensaje desde el hilo 'Partida'
-        e1.clear()
-        
-        enviar_mensaje(sock, msg2)
-        
         #! Desde acá deberia empezar el jugador1
-        msg1 = recibir_mensaje(sock)
+        msg2 = q1.get()     #! Mensaje desde el hilo 'Partida'. Ataque jugador 1.
+        # e1.clear()
         
-        q1.put(msg1+", del j2")
-        
-        pe.wait()
-        
-        e1.wait()
-        msg2 = q1.get() #Mensaje desde el hilo 'Partida'
         enviar_mensaje(sock, msg2)
+        
+        #! Desde acá deberia empezar el jugador2
+        while True:     #! Bucle si es que existe un error en el estado.
 
+            msg1 = recibir_mensaje(sock)
+            
+            q1.put(msg1+", del j2")
+            
+            pe.wait()
+            
+            e1.wait()
+            e1.clear()
+            
+            msg2 = q1.get() #Mensaje desde el hilo 'Partida'
+            
+            enviar_mensaje(sock, msg2)
+            
+            
+            if msg2[3][0]:          #! Sale del bucle porque no hay error en el estado.
+                break
+            
+            elif not(msg2[3][0]):   #! Existe error. 
+                print("hilo jugador2, existe error, me quedo en el bucle")    
+                pass
 
 
 def argumentos():
@@ -117,7 +139,7 @@ def aceptar_cliente(server):
         # nickname = recibir_mensaje(s2)
         nickname = "Jugador" + str(addr[1])
         
-        
+
         global clientes
         #TODO Poner una seccion critica 
         clientes[nickname] = {
@@ -133,9 +155,9 @@ def aceptar_cliente(server):
 
 def matriz_inicial():
     matriz = []
-    for y in range(10):     #Filas
+    for y in range(10):         #! Filas
         matriz.append([])
-        for x in range(10): #Columnas
+        for x in range(10):     #! Columnas
             matriz[y].append(" ")
     return pd.DataFrame(matriz, index = ["A","B","C","D","E","F","G","H","I","J"])
 
@@ -242,9 +264,7 @@ def matriz_barco_random():
                     estado = True
                     
             tamaño -= 1
-        
-        # print("Matriz barco:\n", matriz)
-    print("Tablero de barco completado")
+            
     return matriz
 
 
@@ -262,55 +282,69 @@ def partida(jugadores):
     pe_jugador1 = jugadores[list(jugadores.keys())[0]]["pe"]
     pe_jugador2 = jugadores[list(jugadores.keys())[1]]["pe"]
     
-    # {disparos_enemigos:... , mis_barcos:..., cant_hundidos:...}
+    #! tablero = {disparos_enemigos:DataFrame , mis_barcos:DataFrame, cant_hundidos:Int}
     tablero1 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriz_barco_random(), "cant_hundidos": 0}     
     tablero2 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriz_barco_random(), "cant_hundidos": 0}
     
 
     
     #! Avisar a los jugadores que se encontró partida y quien es el jugador 1 y el 2.
-    q_jugador1.put(["1", tablero1, tablero2])
-    q_jugador2.put(["2", tablero2, tablero1])
-    
+    q_jugador1.put(["Ningun mensaje", tablero1, tablero2,  [True, "1"]])
+    q_jugador2.put(["Ningun mensaje", tablero2, tablero1, [True, "2"]])
     
     #! Siempre empieza el jugador 1. 
     while True:
 
-        #! Desde acá deberia empezar el jugador1
-        pe_jugador1.wait()
-        msg1 = q_jugador1.get()
+        #! Desde acá empieza el jugador1.
+        #! Se tiene que quedar en el bucle hasta que en el estado no exitstan errores (error-s1).
+        while True:
+            print("Turno jugador 1")
+            pe_jugador1.wait()          #! Espera a que el hilo jugador ponga el texto introducido por el usuario.
+            
+            msg1 = q_jugador1.get()     #! Lee el texto de el usuario.
+            
+            msg1, tablero1, tablero2, estado = jugada(msg1, tablero1, tablero2)     #! Procesar el texto del primer jugador.
+            
+            q_jugador1.put([msg1, tablero1, tablero2, estado])      #! Enviar los resultados a los hilos jugadores.
+            
+            e_jugador1.set()        #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
         
-        #TODO Crear la tabla de los bacros
-        # ...
-        # Procesar el mensaje del primer jugador.
-        # ...
-        msg1, tablero1, tablero2 = jugada(msg1, tablero1, tablero2)
-        msg1 = msg1 + ", este mensaje fue procesado por el hilo 'Partida' :)"
-        q_jugador1.put([msg1, tablero1, tablero2])  #Mensaje de si es Agua, Tocado, Hundido 
-        q_jugador2.put([msg1, tablero2, tablero1])  #Mensaje al enemigo sobre el disparo.
-        e_jugador1.set()
+            if estado[0]:           #! Sale del bucle porque no hay error en el estado.
+                print("Fuera del bucle porque no hay error en el estado: ", estado)
+                q_jugador2.put([msg1, tablero2, tablero1, estado])      #! Envia el resultado ya correcto, no envia al otro jugador todos los erores.
+                break
+            elif not(estado[0]):    #! Existe error.
+                print("ERROR DE TIPO S1, ACA NOS QUEDAMOS EN EL BUCLE DEL JUGADOR 1 HASTA QUE ESCRIBA BIEN", estado)
+
         
+        #! Desde acá empieza el jugador2.
+        #! Se tiene que quedar en el bucle hasta que en el estado no exitstan errores (error-s1).
+        while True:
+            print("Turno jugador 2")
+            pe_jugador2.wait()          #! Espera a que el hilo jugador ponga el texto introducido por el usuario.
+            
+            msg1 = q_jugador2.get()     #! Lee el texto de el usuario.
+
+            msg1, tablero2, tablero1, estado = jugada(msg1, tablero2, tablero1)     #! Procesar el texto del primer jugador.
+            
+            q_jugador2.put([msg1, tablero2, tablero1, estado])      #! Enviar los resultados a los hilos jugadores.
+                
+            e_jugador2.set()        #! Establece que ya terminóde procesar y poner los elementos en la cola. 
         
-        #! Desde acá deberia empezar el jugador2
-        pe_jugador2.wait()
-        
-        msg1 = q_jugador2.get()
-        
-        # ...
-        # Procesar el mensaje del primer jugador.
-        # ...
-        msg1, tablero2, tablero1 = jugada(msg1, tablero2, tablero1)
-        msg1 = msg1 + ", este mensaje fue procesado por el hilo 'Partida' :)"
-        q_jugador2.put([msg1, tablero2, tablero1])  #Mensaje de si es Agua, Tocado, Hundido 
-        q_jugador1.put([msg1, tablero1, tablero2])  #Mensaje al enemigo sobre el disparo.
-        e_jugador2.set()
-        
-        pass
+            if estado[0]:           #! Sale del bucle porque no hay error en el estado.
+                print("Fuera del bucle porque no hay error en el estado: ", estado)
+                q_jugador1.put([msg1, tablero1, tablero2, estado])  
+                break
+            elif not(estado[0]):
+                print("ERROR DE TIPO S1, ACA NOS QUEDAMOS EN EL BUCLE DEL JUGADOR 2 HASTA QUE ESCRIBA BIEN. Error: ", estado[1])
+
 
 
 #! Procesamiento del disparo
+#! Tiene que devolver [mensaje, tabelro1, tablero2, estado]     (Estado = [True/False, descripcion])
+#! Errores: s1=Valores no validos, s2=Valores fuera de rango, s3=Disparo ya realizado, 
+#! tablero = {disparos_enemigos:DataFrame , mis_barcos:DataFrame, cant_hundidos:Int}
 def jugada(msg, tablero1, tablero2):
-    # tablero: {disparos_enemigos:... , mis_barcos:..., cant_hundidos:...}
     
     codificacion = str.maketrans(
         'ABCDEFGHIJ',
@@ -322,24 +356,25 @@ def jugada(msg, tablero1, tablero2):
         fila = int(msg[0].translate(codificacion))
         columna = int(msg[1])
     except:
-        return "Valores no validos (error-s1)", tablero1, tablero2
-
+        return "Valores no validos (error-s1)", tablero1, tablero2, [False, "error-s1"]
+    
     if (fila > 9 or fila < 0 or columna > 9 or columna < 0):
-        return "Valores fuera de rango (error-s2)", tablero1, tablero2
+        return "Valores fuera de rango (error-s2)", tablero1, tablero2, [False, "error-s2"]
+    
 
 
     #* 2 - Revisar si ya se disparó en ese lugar (comprobar en disparos_enemigos en tablero 2).
     if tablero2["disparos_enemigos"].iloc[fila, columna] != " ":
-        return "Disparo realizado con aterioridad (error-s3)", tablero1, tablero2
+        return "Disparo realizado con aterioridad (error-s3)", tablero1, tablero2, [False, "error-s3"]
     
     
     #* 3 - Comprobar si le dió a un barco y Guardar Tocado o Agua respectivamente.
     if tablero2["mis_barcos"].iloc[fila, columna] == " ":
         tablero2["disparos_enemigos"].iloc[fila, columna] = "A"
-        return "AGUA!! El disparo fue errado.", tablero1, tablero2
+        return "AGUA!! El disparo fue errado.", tablero1, tablero2, [True, "Agua"]
     
     else:
-        tablero2["disparos_enemigos"].iloc[fila, columna] = "T"  #Tocado
+        tablero2["disparos_enemigos"].iloc[fila, columna] = "T"     #! Tocado
         
         #* 3.1 - Revisar si el barco está undido. 
         #! Barco hundido
@@ -349,14 +384,14 @@ def jugada(msg, tablero1, tablero2):
         
             #* 3.2 - Comprobar si se hundieron todos los barcos.
             if tablero2["cant_hundidos"] >= 5:
-                return "Todos los barcos han sido hundidos!!!", tablero1, tablero2
+                return "Todos los barcos han sido hundidos!!!", tablero1, tablero2, [False, "FIN"]
         
             else:
-                return "HUNDIDO!! El disparo fue certero, {} fuen hundido.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2
+                return "HUNDIDO!! El disparo fue certero, {} fuen hundido.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2, [True, "Hundido"]
 
         #! Barco no hundido
         else:
-            return "TOCADO!! El disparo fue certero, {} afectado.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2
+            return "TOCADO!! El disparo fue certero, {} afectado.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2, [True, "Tocado"]
 
 
 def es_hundido(fila, columna, tablero2):
@@ -465,11 +500,13 @@ if __name__ == '__main__':
 
 
 #TODO: En orden de prioridades.
-# Condiciones de fin de la partida cuando se hunden todos los barcos.
+# Condicion de fin de la partida cuando se hunden todos los barcos, los clientes 
+# deberian terminan pero no lo hacen, el server detecta bien la condicion.
 
-# Que vuelva a jugar el mismo jugador cuando el disparo es en un lugar que ya disparó. 
+#// Que vuelva a jugar el mismo jugador cuando el disparo es en un lugar que ya disparó. 
 
-# Volver a dar el turno al jugador que se equivocó de coordenas (mal escritas). Esto deberia ser por lado del server y no del cliente. Hay una solucion propuesta desde el lado del cliente.
+#// Volver a dar el turno al jugador que se equivocó de coordenas (mal escritas). Esto deberia ser 
+#// por lado del server y no del cliente. Hay una solucion propuesta desde el lado del cliente.
 
 # El click del GUI quedó a medio camino.
 
