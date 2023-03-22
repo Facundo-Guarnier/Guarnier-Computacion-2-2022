@@ -10,10 +10,21 @@ Para definir los requisitos y alcances del trabajo, **antes de entrar a codear**
 ### Consideraciones del código:
 El código debe solucionar un problema haciendo uso de las herramientas vistas en clase. Debe incluir aspectos como:
 * Uso de Sockets con conexión de clientes múltiples de manera concurrente.
-* Uso de mecanismos de IPC
-* Uso de asincronismo de I/O
+
+* Uso de mecanismos de IPC (Inter-Process Communication). 
+   > Pipe 
+   > Queue 
+   > Memoria compratida (multiprocessing.Value(), multiprocessing.Array()).
+   > Event y Barrier no son tecnicamentes IPC ya que son entre hilos y no entre proceso.
+
+* Uso de asincronismo de I/O.
+   > asyncio (No se donde usarlo en el lado del server.)
+
 * Uso de cola de tareas distribuidas
+   > Celery (pero sale en aspectos adicionales)
+
 * Parseo de argumentos por línea de comandos
+   > argparse.ArgumentParser()
 
 Otros aspectos adicionales que puede considerarse:
 * Despliegue en contenedores Docker
@@ -59,29 +70,3 @@ Durante la presentación, el alumno expondrá el funcionamiento de la aplicació
 * El código deberá ser desarrollado de **manera incremental**, por lo que se valoran cambios progresivos (*commits*) en el repositorio de software durante todo el proceso de desarrollo. En la medida que vayan desarrollando la app, vayan commiteando seguido, no esperen a tener una versión funcional para commitear, no importa si funciona o no, commiteen igual! Eso les sirve para que podamos charlar dificultades, inconvenientes, para que yo pueda ver la evolución del proyecto, y de paso, a ustedes les queda un backup de todo lo que van haciendo (ya no es excusa el "se me rompió el disco, me robaron la compu y tenía todo ahí, etc... tenemos git, aprovechenlo!).
 
 * La idea de ese **doc/** en el repositorio es que podamos quedar con una idea fina de lo que van a hacer. A mi me sirve para saber que tienen noción de los alcances de sus apps, lo que tienen que armar, y a ustedes les sirve de guía para no *irse por las ramas* y acotarse a eso. Igualmente durante el desarrollo pueden charlarse cambios, pero lo ideal es que quede lo más definido posible al principio.
-
-
-
-
-Yo:
-   A B C D     [
-1 | | |X| |     [" ", " ", "X", " "]
-2 |N| |X| |     ["N", " ", "X", " "]
-3 |N| |X| |     ...
-4 | | | | |     ...
-               ]
-
-   A B C D  
-1 | | | | | 
-2 | | |F|F| 
-3 | |O| | |
-4 | |O| | | 
-
-B3 +  
-
-Rival:
-   A B C D
-1 |N| | | |
-2 | |X| | |
-3 | |X|N| |
-4 | |X| | |

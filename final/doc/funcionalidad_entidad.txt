@@ -1,0 +1,38 @@
+Por ahora cada funcion está explicada en el codigo (comentado).
+
+El Server es el encargado de: 
+    > Un hilo (aceptar_clientes) encargado de establecer conexion 
+      con los clientes y dedicarle un hilo (cliente).
+    > Asignar una partida cada dos clientes. Cada partida es un hilo.
+	> Los 3 hilos (2 clientes y 1 partida) relacionados para la partida 
+      se comunican via Queue, Event y punto de encuentro (Barrier).
+    > El hilo partida crea los tableros con los barcos, gestiona cada 
+      disparo (Agua, Tocado, Hundido), determina el fin de la partida y 
+      envia el estado de los tableros y de cada disparo a los clientes.
+    > Un proceoso (o alguna alternativa) es el encargado de almacenar 
+      los resultados de la partida en la BD utilizando AsyncIO. (Falta)
+
+El servidor recibe por parámetro: 
+	> IP
+	> Puerto
+	> Cantidad máxima de jugadores simultáneos. (Falta)
+	> Ubicación de la BD. (Falta)
+
+
+El cliente realiza lo siguiente:
+    > Comprueba si el server existe.
+    > Espera a que se le asigne una partida.
+    > Enviar las coordenas de cada disparo.
+    > Mostrar (por consola o GUI) el estado de la partida.
+
+El cliente recibe por parámetro:
+	> IP del server
+	> Puerto del server
+	> Nickname (Falta)
+
+Cada cliete se le es asignado, por el lado del servidor:
+    > Socket (s2)
+    > Queue (q1)
+    > Event (e1)
+    > Barrier (pe, punto de encuentro)
+estas son herramientas necesarias para la comunicación y sincronización con el servidor

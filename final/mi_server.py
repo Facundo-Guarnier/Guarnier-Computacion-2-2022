@@ -98,7 +98,6 @@ def jugador2(sock, q1, e1, pe):
 def argumentos():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, required=False, help="port", default=5000)
-    # parser.add_argument("-c", type=str, required=True, help="concurrencia", choices=["p", "t"])
     return parser.parse_args()
 
 
@@ -513,15 +512,17 @@ if __name__ == '__main__':
 
 # El click del GUI quedó a medio camino.
 
-# Como cerramos las conexiones
+# Como cerramos las conexiones.
+
+# Cambiar el diccionario cliente por una clase cliente.
+
+# Cambiar la variable global clientes por una variable compratida entre hilos del mismo proceso.
 
 # Separar los barcos un lugar a los costados, no se pueden estar tocando.
 
 # Ver si se puede con IPv4 y v6
 
 # Usar MongoBD  
-
-# Cambiar los diccionarios por clases.
 
 # ¿Como borrar un cliente que se desconectó con "ctrl + c"?
 

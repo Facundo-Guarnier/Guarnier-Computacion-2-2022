@@ -1,0 +1,45 @@
+Descripcion App: Batalla Naval
+
+El juego consiste en dos jugadores que compiten por hundir los barcos del otro. Cada 
+jugador tiene su propio tablero con sus barcos y marca los disparos que recibe del 
+oponente. El objetivo es hundir todos los barcos del oponente antes de que él hunda 
+los tuyos.
+
+Existen 5 tipos de barcos:
+    > Lancha torpedera, longitud 1 unidad.
+    > Fragata, longitud 2 unidades.
+    > Destructor, longitud 3 unidades.
+    > Submarino, longitud 4 unidades.
+    > Portaaviones, longitud 5 unidades.
+
+El cliente enviará las coordenadas del disparo al servidor y el servidor responderá 
+con un mensaje que indique si el disparo fue un acierto (Tocado) o un fallo (Agua), 
+y el estado de los tableros tras el disparo; o caso contrario, avisará que hubo un 
+error (cordenadas errada u otra causa). El mensaje también informará al cliente si 
+hundió un barco.
+
+El servidor es capaz de soportar mas de 2 clientes y, por lo tanto, multiples paridas 
+en simultaneo. Cada hilo partida se comunica y sincroniza con cada hilo de los 2 clientes 
+a travez de Queue, Event y Barrier. El resultado de cada partida será guardado en una 
+base de datos.
+
+El usuario, antes de iniciar la app, decide si desea utilizar la terminal o un entorno 
+grafico (Tkinter) a travez de un argumento pasado al momento de iniciar la app. Una ves iniciada, 
+espera a que el servidor lo empareje con otro jugador, luego recibe la posición de 
+sus barcos de forma aleatoria de parte del servidor para empezar a jugar a "Batalla Naval". 
+
+La implementacion del juego se puede resummir en los siguientes pasos:
+    > Incio del server, creacion del proceso juego y para la base de datos.
+    > Creacion de un hilo encargado de la conexion de nuevos clientes con el servidor.
+    > Establecer una Partida (Hilo) cuando 2 clientes esten conectados y no en una partida.
+    > Definir la estructura del tablero de juego (Posicion de los barcos).
+    > Iniciar el juego y permitir que los jugadores realicen disparos.
+    > Evaluar cada disparo en el lado del servidor (funcion "jugada"). 
+    > Finalizar el juego cuando uno de los jugadores hunde todos los barcos del oponente.
+    > Guardar el resultado en la BD.
+
+
+Falta alarar/definir:
+    > Secciones criticas
+    > Uso de asincronismo de I/O (AsyncIO)
+    > Uso de cola de tareas distribuidas (Celery???)
