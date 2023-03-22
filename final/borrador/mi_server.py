@@ -15,6 +15,7 @@ def recibir_mensaje(s):
     return pickle.loads(mensaje)
 
 
+#* Un hilo para cada uno de los clientes.
 def cliente(sock, q1, e1, pe):   
     print("  Hilo 'Conexion' ID:", threading.get_native_id())
 
@@ -117,11 +118,12 @@ def abrir_socket(args):
     return s
 
 
-#! Conexion con la BD
+#TODO Conexion con la BD
 def base_datos():
     pass
 
 
+#* Hilo de para aceptar.
 def aceptar_cliente(server):
     print("  Hilo 'Aceptar_cliente' ID:", threading.get_native_id())
     while True:
@@ -136,12 +138,11 @@ def aceptar_cliente(server):
         # s1 = threading.Semaphore(3)   #! Contador de un numero limitado de recursos (seccion critica). Es este caso, hay 3 recursos disponibles.
         # l1 = threading.Lock()         #! Protege una seccion critica, inicia en abierto. Es un caso particular de Semaphore inicializado en 1.
 
-        # nickname = recibir_mensaje(s2)
         nickname = "Jugador" + str(addr[1])
         
-
         global clientes
         #TODO Poner una seccion critica 
+        #TODO Los clientes deberian ser un objeto
         clientes[nickname] = {
             "s2": s2,
             "q1": q1,
@@ -268,11 +269,11 @@ def matriz_barco_random():
     return matriz
 
 
-#! Hilo de partida     
+#* Un hilo para cada partida (cada 2 jugadores).
 def partida(jugadores):
     print("  Hilo 'Partida' ID:", threading.get_native_id())
 
-    global clientes
+    # global clientes
     q_jugador1 = jugadores[list(jugadores.keys())[0]]["q1"]
     q_jugador2 = jugadores[list(jugadores.keys())[1]]["q1"]
     
@@ -432,11 +433,11 @@ def tipo_barco(letra):
         return "una Fragata"
 
 
+#* Proceso juego.  
 #! Acá tiene que agregar al diccionario las conexiones
-def online(server):
-    print("  Proceso 'Online' ID:", os.getpid())
+def juego(server):
+    print("  Proceso 'Juego' ID:", os.getpid())
     
-
     global clientes
     clientes = {}
     
@@ -446,10 +447,12 @@ def online(server):
     while True:
         jugadores_espera = {}
         
+        #TODO Seccion critica?? Deberia ser accedido por un hilo a la vez (juego o aceptar_cliente).
         for clave in clientes.keys():
             if clientes[clave]["espera"]:
                 jugadores_espera[clave] = clientes[clave]
                 
+                #TODO Esta medio raro que hayan dos "if len() > 2:". Tener en cuenta que la variable jugadores_espera es pasada al hilo partida.
                 if len(jugadores_espera) >= 2:
                     break
         
@@ -485,7 +488,7 @@ def main():
     signal.signal(signal.SIGINT, señal)
 
     #! Proceso de todas las partidas y clienets
-    p_partidas = multiprocessing.Process(target=online, args=(server,)).start()
+    p_juego = multiprocessing.Process(target=juego, args=(server,)).start()
 
     #! Proceso BD
     # p_bd = multiprocessing.Process(target=base_datos, args=())
