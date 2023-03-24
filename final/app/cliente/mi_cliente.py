@@ -53,16 +53,9 @@ def enviar(s):
     er = r'[A-J][0-9]$'   #! Expresion regular para las coordenadas.
 
     while True:
-        msg1 = input("[ Cliente {} ] Input: ".format(hora_actual())).upper()
+        msg1 = input("[ Cliente {} ] Coordenadas: ".format(hora_actual())).upper()
         
-        #TODO Hacer mejor esto, no siempre deberia pueder escribir continuar o salir.  
-        if msg1.lower() == "continuar":     #! Jugar proxima partida
-            break
-        
-        elif msg1.lower() == "salir":       #! Desconectar
-            break
-        
-        elif re.match(er, msg1):        #! Coordenada correcta
+        if re.match(er, msg1):        #! Coordenada correcta
             break
         
         else:
@@ -82,6 +75,31 @@ def print_mensaje(mensaje):
     print("\n++++++++++++++++++++++++++++++++++++++++++++ PRINT ++++++++++++++++++++++++++++++++++++++++++++\n")
 
 
+def fin_partida(s):
+    
+    while True:
+        msg1 = input("[ Cliente {} ] Continuar o salir: ".format(hora_actual())).lower()
+        
+        if msg1 == "continuar":
+            print("[ C ] Entraste en continuar")
+            enviar_mensaje(s, msg1)
+            mensaje = recibir_mensaje(s)        
+            print(mensaje)
+            return False
+        
+        elif msg1 == "salir":
+            print("[ C ] Entraste en salir")
+            enviar_mensaje(s, msg1)
+            mensaje = recibir_mensaje(s)        
+            print(mensaje)
+            return True
+        
+        else: 
+            print("[ C ] Escribí bien bro...", msg1)
+            
+
+
+
 def main():
     args = argumentos()
 
@@ -89,6 +107,8 @@ def main():
     
     if args.i == "n":       #! Sin interfaz grafica (GUI)
         print("Sin GUI")
+        
+        
         mensaje = recibir_mensaje(s)        
         print_mensaje(mensaje)
         
@@ -108,18 +128,18 @@ def main():
                     if respuesta[3][0]:    #! No existe error
                         print("+++++++++++++++++++++ No hay error +++++++++++++++++++++")
                         print_mensaje(respuesta)
-                        
-                        if respuesta[3][1] == "FIN":
-                            print("FIN DE LA PARTIDA, CONTINUAR O SALIR")
-                        
-                        else:
-                            break
+                        break
                     
                     else:       #! Existe error.
                         print("+++++++++++++++++++++ Si hay error +++++++++++++++++++++")
                         print_mensaje(respuesta)
-                    
-                    
+                
+                
+                if respuesta[3][1] == "FIN":
+                    print("FIN DE LA PARTIDA, CONTINUAR O SALIR")
+                    if fin_partida(s):
+                        break                    
+                
                 #! Estado del actaque enemigo
                 while True:     #! Bucle si es que existe un error del server (ej: error-s1)
                     print("++ ESPERANDO RESPUESTA DEL SERVIDOR del ataque enemigo")
@@ -128,17 +148,16 @@ def main():
                     if respuesta[3][0]:    #! No existe error
                         print("+++++++++++++++++++++ No hay error +++++++++++++++++++++")
                         print_mensaje(respuesta)
-                        if respuesta[3][1] == "FIN":
-                            print("FIN DE LA PARTIDA, CONTINUAR O SALIR")
-                        
-                        else:
-                            break
+                        break
                     
                     else:       #! Existe error.
                         print("+++++++++++++++++++++ Si hay error +++++++++++++++++++++")
                         print_mensaje(respuesta)
-                        
-        
+                
+                if respuesta[3][1] == "FIN":
+                    print("FIN DE LA PARTIDA, CONTINUAR O SALIR")
+                    if fin_partida(s):
+                        break            
 
         elif mensaje[3][1] == "2":  
             while True:     #! Bucle del Jugador 2
@@ -151,16 +170,16 @@ def main():
                     if respuesta[3][0]:    #! No existe error
                         print("+++++++++++++++++++++ No hay error +++++++++++++++++++++")
                         print_mensaje(respuesta)
-                        if respuesta[3][1] == "FIN":
-                            print("FIN DE LA PARTIDA, CONTINUAR O SALIR")
-                        
-                        else:
-                            break
+                        break
                     
                     else:       #! Existe error.
                         print("+++++++++++++++++++++ Si hay error +++++++++++++++++++++")
                         print_mensaje(respuesta)
                         
+                if respuesta[3][1] == "FIN":
+                    print("FIN DE LA PARTIDA, CONTINUAR O SALIR")
+                    if fin_partida(s):
+                        break                            
                         
                 while True:     #! Bucle si es que existe un error del server (ej: error-s1)
                     enviar(s)   #! Envia las coordenadas ingresadas por el usuario.
@@ -171,17 +190,16 @@ def main():
                     if respuesta[3][0]:    #! No existe error
                         print("+++++++++++++++++++++ No hay error +++++++++++++++++++++")
                         print_mensaje(respuesta)
-                        
-                        if respuesta[3][1] == "FIN":
-                            print("FIN DE LA PARTIDA, CONTINUAR O SALIR")
-                        
-                        else:
-                            break
+                        break
                     
                     else:       #! Existe error.
                         print("+++++++++++++++++++++ Si hay error +++++++++++++++++++++")
                         print_mensaje(respuesta)
-                    
+                
+                if respuesta[3][1] == "FIN":
+                    print("FIN DE LA PARTIDA, CONTINUAR O SALIR")
+                    if fin_partida(s):
+                        break
 
         else:
             print("ERROR AL IDENTIFICAR JUGADOR (error-c1)")
@@ -190,6 +208,10 @@ def main():
     elif args.i == "y":
         # s=""
         gui(s)   
+
+    print("Finalizando...")
+    s.close()
+    os._exit()
 
 #*-------------------------------------------------- GUI --------------------------------------------------
 

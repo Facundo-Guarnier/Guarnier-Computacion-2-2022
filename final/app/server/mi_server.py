@@ -51,8 +51,12 @@ def jugador1(sock, q1, e1, pe):
             
             enviar_mensaje(sock, msg2)
             
-            if msg2[3][0]:          #! Sale del bucle porque no hay error en el estado.
-                break
+            if msg2[3][0]:          
+                if msg2[3][1] == "FIN":
+                    print("Entraste en el pass del jugador1")
+                    pass
+                else:
+                    break   #! Sale del bucle porque no hay error en el estado.
             
             elif not(msg2[3][0]):   #! Existe error. 
                 print("hilo jugador1, existe error, me quedo en el bucle")    
@@ -67,7 +71,6 @@ def jugador2(sock, q1, e1, pe):
     while True:
         #! Desde acá deberia empezar el jugador1
         msg2 = q1.get()     #! Mensaje desde el hilo 'Partida'. Ataque jugador 1.
-        # e1.clear()
         
         enviar_mensaje(sock, msg2)
         
@@ -89,7 +92,10 @@ def jugador2(sock, q1, e1, pe):
             
             
             if msg2[3][0]:          #! Sale del bucle porque no hay error en el estado.
-                break
+                if msg2[3][1] == "FIN":
+                    pass
+                else:
+                    break
             
             elif not(msg2[3][0]):   #! Existe error. 
                 print("hilo jugador2, existe error, me quedo en el bucle")    
@@ -331,9 +337,8 @@ def partida(jugadores):
             break   #! Sale del bucle de turnos para iniciar el fin de la partida.
     
     
-    fin_partida(jugadores[0])
-    fin_partida(jugadores[1])
-        
+    threading.Thread(target=fin_partida, args=(jugadores[0],)).start()
+    threading.Thread(target=fin_partida, args=(jugadores[1],)).start()
         
 
 #! Fin de la partida por cada jugador.
@@ -342,28 +347,30 @@ def partida(jugadores):
 #! suceda, el cliente deberia cerrar su conexion con el .close() para liberar recursos.
 def fin_partida(jugador):
     
-    Acá me quedé, tengo que ver bien el orden de cuando leer y cuando enviar un mensaje.
-    Tiene que leer el "continuar" o "salir".
-    
     global clientes_objeto
     
+    print("Entraste en fin_partida", jugador.nickname)
+    
     #! Jugador1
+    
+    print("Antes del pe", jugador.nickname)
     jugador.pe.wait()       #! Espera a que el hilo jugador ponga el texto introducido por el usuario.
-                            #TODO El cliente tiene que mostrar al usuario las opciones de si volver a jugar o desconectarce.
+    print("Despues del pe", jugador.nickname)
     
     msg1 = jugador.q1.get()     #! Lee el texto de el usuario. 
-    
     
     print("MENSAJE: ", msg1)
     
     if msg1=="continuar": 
+        print("Entraste en continuar", jugador.nickname)
         jugador.q1.put(["Buscando proxima partida...", "", "", [True, "Continuar"]])      #! Enviar los resultados al hilo jugador.
         jugador.e1.set()        #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
         
         jugador.espera = True
         #TODO Resetiar todo los atributos.
     
-    else:
+    elif msg1=="salir":
+        print("Entraste en salir", jugador.nickname)
         jugador.q1.put(["finalizando y desconectando...", "", "", [False, "Desconexion"]])      #! Enviar los resultados al hilo jugador.
         jugador.e1.set()        #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
         jugador.s2.close()
@@ -502,14 +509,11 @@ def juego(server):
             jugadores_espera = []
             
 
-            time.sleep(300)
-
         else:
             print("++++++++++++++++++++ Esperando jugador nuevo ++++++++++++++++++++")
             print("  Total de jugadores:", len(clientes_objeto))
             print("  Jugadores en espera:", len(jugadores_espera))
-            time.sleep(3)
-
+            time.sleep(6)
 
 
 def señal(nro_senial, marco):
@@ -542,8 +546,10 @@ if __name__ == '__main__':
 
 
 #TODO: En orden de prioridades.
-# Condicion de fin de la partida cuando se hunden todos los barcos, los clientes 
-# deberian terminan pero no lo hacen, el server detecta bien la condicion.
+# Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi)
+
+#// Condicion de fin de la partida cuando se hunden todos los barcos, los clientes 
+#// deberian terminan pero no lo hacen, el server detecta bien la condicion.
 
 #// Que vuelva a jugar el mismo jugador cuando el disparo es en un lugar que ya disparó. 
 
