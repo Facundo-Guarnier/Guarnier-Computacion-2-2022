@@ -40,7 +40,7 @@ def jugador1(sock, q1, e1, pe):
         while True:     #! Bucle si es que existe un error en el estado.
             msg1 = recibir_mensaje(sock)
                     
-            q1.put(msg1+", del j1")     #* Pone el mensaje en la cola
+            q1.put(msg1)     #* Pone el mensaje en la cola
             
             pe.wait()       #* Espera al hilo partida a que llegue al punto de encuentro (que ya pueda leer q1).
             
@@ -76,7 +76,7 @@ def jugador2(sock, q1, e1, pe):
 
             msg1 = recibir_mensaje(sock)
             
-            q1.put(msg1+", del j2")
+            q1.put(msg1)
             
             pe.wait()
             
@@ -106,11 +106,8 @@ def abrir_socket(args):
     host = "0.0.0.0"
     port = args.p
 
-    
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((host, port))
-
-    
 
     print("Padre ID:", os.getpid())
     print("Server 'ON' <" + host + ": " + str(port) + ">")
@@ -134,7 +131,6 @@ def aceptar_cliente(server):
         print("  Nuevo cliente {}". format(addr))
         print("  Proceso padre ID:", os.getpid())
         
-        
         global clientes_objeto
         nickname = "Jugador" + str(i+1)
         clientes_objeto.append(C_Cliente(s2, addr, nickname))
@@ -142,7 +138,6 @@ def aceptar_cliente(server):
         threading.Thread(target=f_cliente, args=(clientes_objeto[i],)).start()
         
         i += 1
-        
 
 
 def matriz_inicial():
@@ -279,7 +274,6 @@ def partida(jugadores):
     tablero2 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriz_barco_random(), "cant_hundidos": 0}
     
 
-    
     #! Avisar a los jugadores que se encontró partida y quien es el jugador 1 y el 2.
     q_jugador1.put(["Ningun mensaje", tablero1, tablero2,  [True, "1"]])
     q_jugador2.put(["Ningun mensaje", tablero2, tablero1, [True, "2"]])
@@ -304,14 +298,13 @@ def partida(jugadores):
                 q_jugador2.put([msg1, tablero2, tablero1, estado])      #! Envia el resultado ya correcto, no envia al otro jugador todos los erores.
                 break
 
-            elif not(estado[0]):    #! Existe error.
-                
-                if estado[1] == "FIN":      #! Fin de la partida.
-                    break   #! Sale del turno del jugador 1.
-                    
+            elif not(estado[0]):    #! Existe error, por lo tanto se queda en el bucle del jugador.    
+                pass    #! Solo para representar cuando hay error, no tiene ninguna funcion real.
 
+        
         if estado[1] == "FIN":      #! Fin de la partida.
             break   #! Sale del bucle de turnos para iniciar el fin de la partida.
+        
         
         #! Desde acá empieza el jugador2.
         #! Se tiene que quedar en el bucle hasta que en el estado no exitstan errores (error-s1).
@@ -330,29 +323,57 @@ def partida(jugadores):
                 q_jugador1.put([msg1, tablero1, tablero2, estado])  
                 break
             
-            elif not(estado[0]):
-                
-                if estado[1] == "FIN":      #! Fin de la partida.
-                    break   #! Sale del turno del jugador 1.
-                    
+            elif not(estado[0]):    #! Existe error, por lo tanto se queda en el bucle del jugador.    
+                pass    #! Solo para representar cuando hay error, no tiene ninguna funcion real.
+
 
         if estado[1] == "FIN":      #! Fin de la partida.
             break   #! Sale del bucle de turnos para iniciar el fin de la partida.
+    
+    
+    fin_partida(jugadores[0])
+    fin_partida(jugadores[1])
         
         
+
+#! Fin de la partida por cada jugador.
+#! Anuncia al ganador y pregutar al cliente si desean finalizar la conexion o jugar otra vez.
+#! Al cliente le llegará un mensaje por el metedo recv() con longitud cero. Cuando esto  
+#! suceda, el cliente deberia cerrar su conexion con el .close() para liberar recursos.
+def fin_partida(jugador):
+    
+    Acá me quedé, tengo que ver bien el orden de cuando leer y cuando enviar un mensaje.
+    Tiene que leer el "continuar" o "salir".
+    
+    global clientes_objeto
+    
+    #! Jugador1
+    jugador.pe.wait()       #! Espera a que el hilo jugador ponga el texto introducido por el usuario.
+                            #TODO El cliente tiene que mostrar al usuario las opciones de si volver a jugar o desconectarce.
+    
+    msg1 = jugador.q1.get()     #! Lee el texto de el usuario. 
+    
+    
+    print("MENSAJE: ", msg1)
+    
+    if msg1=="continuar": 
+        jugador.q1.put(["Buscando proxima partida...", "", "", [True, "Continuar"]])      #! Enviar los resultados al hilo jugador.
+        jugador.e1.set()        #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
         
-        #TODO Fin de la partida.
-        #TODO Deberia anunciar al ganador y pregutar a los clientes si desean finalizar la conexion o jugar otra vez.
-        #! Al cliente le llegará un mensaje por el metedo recv() con longitud cero. Cuando esto  
-        #! suceda, el cliente deberia cerrar su conexion con el .close() para liberar recursos.
+        jugador.espera = True
+        #TODO Resetiar todo los atributos.
+    
+    else:
+        jugador.q1.put(["finalizando y desconectando...", "", "", [False, "Desconexion"]])      #! Enviar los resultados al hilo jugador.
+        jugador.e1.set()        #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
+        jugador.s2.close()
         
-        # s_jugador1 = jugadores[list(jugadores.keys())[0]]["s2"]
-        # s_jugador2 = jugadores[list(jugadores.keys())[1]]["s2"]
-        
-        # s_jugador1.close()      #! Deberia serrar la conexion con el cliente.
-        
-        
-        
+        #! Busca y elimina al jugador de la lista de jugadores.
+        for cliente in clientes_objeto:
+            if cliente.nickname == jugador.nickname:
+                clientes_objeto.remove(cliente)
+
+
 
 #! Procesamiento del disparo
 #! Tiene que devolver [mensaje, tabelro1, tablero2, estado]     (Estado = [True/False, descripcion])
@@ -397,8 +418,9 @@ def jugada(msg, tablero1, tablero2):
             tablero2["cant_hundidos"] = tablero2["cant_hundidos"] + 1
         
             #* 3.2 - Comprobar si se hundieron todos los barcos.
-            if tablero2["cant_hundidos"] >= 5:
-                return "Todos los barcos han sido hundidos!!!", tablero1, tablero2, [False, "FIN"]
+            # if tablero2["cant_hundidos"] >= 5:
+            if tablero2["cant_hundidos"] >= 1:
+                return "Todos los barcos han sido hundidos!!!", tablero1, tablero2, [True, "FIN"]
         
             else:
                 return "HUNDIDO!! El disparo fue certero, {} fuen hundido.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2, [True, "Hundido"]
@@ -538,9 +560,11 @@ if __name__ == '__main__':
 
 # Separar los barcos un lugar a los costados, no se pueden estar tocando.
 
-# Ver si se puede con IPv4 y v6
+# Ver si se puede con IPv4 y v6.
 
-# Usar MongoBD  
+# Usar MongoBD  .
+
+# Cada usuario pueda poner su nickname personalizado.
 
 # ¿Como borrar un cliente que se desconectó con "ctrl + c"?
 

@@ -53,9 +53,18 @@ def enviar(s):
     er = r'[A-J][0-9]$'   #! Expresion regular para las coordenadas.
 
     while True:
-        msg1 = input("[ Cliente {} ] Coordenada: ".format(hora_actual())).upper()
-        if re.match(er, msg1):
+        msg1 = input("[ Cliente {} ] Input: ".format(hora_actual())).upper()
+        
+        #TODO Hacer mejor esto, no siempre deberia pueder escribir continuar o salir.  
+        if msg1.lower() == "continuar":     #! Jugar proxima partida
             break
+        
+        elif msg1.lower() == "salir":       #! Desconectar
+            break
+        
+        elif re.match(er, msg1):        #! Coordenada correcta
+            break
+        
         else:
             print("[ Cliente {} ] Coordenada inválida.".format(hora_actual()))
     
@@ -99,7 +108,12 @@ def main():
                     if respuesta[3][0]:    #! No existe error
                         print("+++++++++++++++++++++ No hay error +++++++++++++++++++++")
                         print_mensaje(respuesta)
-                        break
+                        
+                        if respuesta[3][1] == "FIN":
+                            print("FIN DE LA PARTIDA, CONTINUAR O SALIR")
+                        
+                        else:
+                            break
                     
                     else:       #! Existe error.
                         print("+++++++++++++++++++++ Si hay error +++++++++++++++++++++")
@@ -114,7 +128,11 @@ def main():
                     if respuesta[3][0]:    #! No existe error
                         print("+++++++++++++++++++++ No hay error +++++++++++++++++++++")
                         print_mensaje(respuesta)
-                        break
+                        if respuesta[3][1] == "FIN":
+                            print("FIN DE LA PARTIDA, CONTINUAR O SALIR")
+                        
+                        else:
+                            break
                     
                     else:       #! Existe error.
                         print("+++++++++++++++++++++ Si hay error +++++++++++++++++++++")
@@ -133,7 +151,11 @@ def main():
                     if respuesta[3][0]:    #! No existe error
                         print("+++++++++++++++++++++ No hay error +++++++++++++++++++++")
                         print_mensaje(respuesta)
-                        break
+                        if respuesta[3][1] == "FIN":
+                            print("FIN DE LA PARTIDA, CONTINUAR O SALIR")
+                        
+                        else:
+                            break
                     
                     else:       #! Existe error.
                         print("+++++++++++++++++++++ Si hay error +++++++++++++++++++++")
@@ -150,7 +172,11 @@ def main():
                         print("+++++++++++++++++++++ No hay error +++++++++++++++++++++")
                         print_mensaje(respuesta)
                         
-                        break
+                        if respuesta[3][1] == "FIN":
+                            print("FIN DE LA PARTIDA, CONTINUAR O SALIR")
+                        
+                        else:
+                            break
                     
                     else:       #! Existe error.
                         print("+++++++++++++++++++++ Si hay error +++++++++++++++++++++")
@@ -366,10 +392,10 @@ if __name__ == '__main__':
 # TODO
 # Ver lo que está en rojo en la funcion "barcos_tableros".
 
+# Hacer bien lo de continuar o salir al fin de una partida. Revisar funcion "enviar".
+
 # Como comunicar la funcion "on_board_click" con la de "barcos_tableros" para saber cuando 
 # puedo hacer click y cuando no, por cuestion de turnos.
 
 #// El problema de los tag al hacer click seguramente se debe a que el espacio en blaco 
 #// del Dataframe tiene otro tag que el del rectangulo donde este se encuentra.
-
-# 

@@ -8,12 +8,6 @@ port = 5000
 
 def f_cliente(cli):
     cli.espera = "tu vieja"
-    time.sleep(3)
-    cli.espera = "tu vieja2"
-    time.sleep(3)
-    cli.espera = "tu vieja3"
-    time.sleep(3)
-    cli.espera = "tu vieja4"
     
 
 
@@ -26,19 +20,19 @@ def aceptar2_cliente(server):
         s2 = "el socket"
         addr = ["la ip", "el puerto"]
         
-        global cliente_objeto
+        global clientes_objeto
         nickname = "Jugador" + str(i+1)
-        cliente_objeto.append(C_Cliente(s2, addr, nickname))
+        clientes_objeto.append(C_Cliente(s2, addr, nickname))
         
         
-        threading.Thread(target=f_cliente, args=(cliente_objeto[i],)).start()
+        threading.Thread(target=f_cliente, args=(clientes_objeto[i],)).start()
         #! Estoy probando si el objeto de la lista al modificarlo en el hilo, en la lista tambien se modifica.
     
         i += 1
     
     global cliente_en_espera
     cliente_en_espera =[]
-    cliente_en_espera.append(cliente_objeto[1])
+    cliente_en_espera.append(clientes_objeto[1])
     
     
     
@@ -47,8 +41,8 @@ def main():
 
     s = "el server"
 
-    global cliente_objeto
-    cliente_objeto = []
+    global clientes_objeto
+    clientes_objeto = []
     
     
     global cliente_en_espera
@@ -56,12 +50,16 @@ def main():
     
     threading.Thread(target=aceptar2_cliente, args=(s,)).start()
     
-    while True:
-        time.sleep(2)
-        print("Objeto: ", cliente_objeto[0], cliente_objeto[1])
-        print("En espera: ", cliente_en_espera[0])
-        print("++++++++++++++++++++++++++++++++++")
+    time.sleep(2)
+    print("Objeto: ", clientes_objeto)
+    print("++++++++++++++++++++++++++++++++++")
         
+        
+    for cliente in clientes_objeto:
+        if cliente.nickname == "Jugador1":
+            clientes_objeto.remove(cliente)
+    print("Objeto: ", clientes_objeto)
+    
     
     
 if __name__ == '__main__':
