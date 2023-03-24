@@ -1,5 +1,6 @@
 import socket, threading, os, multiprocessing, argparse, queue, time, signal, random, pickle, re
 import pandas as pd
+from cliente import C_Cliente
 
 # https://stackoverflow.com/questions/3991104/very-large-input-and-piping-using-subprocess-popen
 
@@ -16,18 +17,18 @@ def recibir_mensaje(s):
 
 
 #* Un hilo para cada uno de los clientes.
-def cliente(sock, q1, e1, pe):   
+def f_cliente(cli):   
     print("  Hilo 'Conexion' ID:", threading.get_native_id())
 
-    mensaje = q1.get()
+    mensaje = cli.q1.get()
         
     if "1" == mensaje[3][1]: 
-        enviar_mensaje(sock, mensaje)
-        jugador1(sock, q1, e1, pe)
+        enviar_mensaje(cli.s1, mensaje)
+        jugador1(cli.s1, cli.q1, cli.e1, cli.pe)
         
     elif "2" == mensaje[3][1]:
-        enviar_mensaje(sock, mensaje)
-        jugador2(sock, q1, e1, pe)
+        enviar_mensaje(cli.s1, mensaje)
+        jugador2(cli.s1, cli.q1, cli.e1, cli.pe)
     
     else:
         print("error-s8")
@@ -125,32 +126,23 @@ def base_datos():
 #* Hilo de para aceptar.
 def aceptar_cliente(server):
     print("  Hilo 'Aceptar_cliente' ID:", threading.get_native_id())
+    
+    i = 0
     while True:
         s2,addr = server.accept()
         print("-------------------------------------")
         print("  Nuevo cliente {}". format(addr))
         print("  Proceso padre ID:", os.getpid())
         
-        q1 = queue.Queue(maxsize=1)     #! Cola de elementos, es de tipo FIFO. Se está limitando a 1 elemento. 
-        e1 = threading.Event()          #! Predeterminado es falso. Señala cuando se a producido un evento (un cambio de estado en el programa).
-        pe = threading.Barrier(2)       #! Punto de encuentro de hilos, se detienen hasta que lleguen los necesarios (2 en este caso) a la barrera.
-        # s1 = threading.Semaphore(3)   #! Contador de un numero limitado de recursos (seccion critica). Es este caso, hay 3 recursos disponibles.
-        # l1 = threading.Lock()         #! Protege una seccion critica, inicia en abierto. Es un caso particular de Semaphore inicializado en 1.
-
-        nickname = "Jugador" + str(addr[1])
         
-        global clientes
-        #TODO Poner una seccion critica 
-        #TODO Los clientes deberian ser un objeto
-        clientes[nickname] = {
-            "s2": s2,
-            "q1": q1,
-            "e1": e1,
-            "espera": True,
-            "pe": pe,
-        }
-
-        threading.Thread(target=cliente, args=(s2, q1, e1, pe)).start()
+        global clientes_objeto
+        nickname = "Jugador" + str(i+1)
+        clientes_objeto.append(C_Cliente(s2, addr, nickname))
+        
+        threading.Thread(target=f_cliente, args=(clientes_objeto[i],)).start()
+        
+        i += 1
+        
 
 
 def matriz_inicial():
@@ -272,15 +264,15 @@ def matriz_barco_random():
 def partida(jugadores):
     print("  Hilo 'Partida' ID:", threading.get_native_id())
 
-    # global clientes
-    q_jugador1 = jugadores[list(jugadores.keys())[0]]["q1"]
-    q_jugador2 = jugadores[list(jugadores.keys())[1]]["q1"]
+    q_jugador1 = jugadores[0].q1
+    q_jugador2 = jugadores[1].q1
     
-    e_jugador1 = jugadores[list(jugadores.keys())[0]]["e1"]
-    e_jugador2 = jugadores[list(jugadores.keys())[1]]["e1"]
+    e_jugador1 = jugadores[0].e1
+    e_jugador2 = jugadores[1].e1
     
-    pe_jugador1 = jugadores[list(jugadores.keys())[0]]["pe"]
-    pe_jugador2 = jugadores[list(jugadores.keys())[1]]["pe"]
+    pe_jugador1 = jugadores[0].pe
+    pe_jugador2 = jugadores[1].pe
+
     
     #! tablero = {disparos_enemigos:DataFrame , mis_barcos:DataFrame, cant_hundidos:Int}
     tablero1 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriz_barco_random(), "cant_hundidos": 0}     
@@ -298,7 +290,6 @@ def partida(jugadores):
         #! Desde acá empieza el jugador1.
         #! Se tiene que quedar en el bucle hasta que en el estado no exitstan errores (error-s1).
         while True:
-            print("Turno jugador 1")
             pe_jugador1.wait()          #! Espera a que el hilo jugador ponga el texto introducido por el usuario.
             
             msg1 = q_jugador1.get()     #! Lee el texto de el usuario.
@@ -310,17 +301,21 @@ def partida(jugadores):
             e_jugador1.set()        #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
         
             if estado[0]:           #! Sale del bucle porque no hay error en el estado.
-                print("Fuera del bucle porque no hay error en el estado: ", estado)
                 q_jugador2.put([msg1, tablero2, tablero1, estado])      #! Envia el resultado ya correcto, no envia al otro jugador todos los erores.
                 break
-            elif not(estado[0]):    #! Existe error.
-                print("ERROR DE TIPO S1, ACA NOS QUEDAMOS EN EL BUCLE DEL JUGADOR 1 HASTA QUE ESCRIBA BIEN", estado)
 
+            elif not(estado[0]):    #! Existe error.
+                
+                if estado[1] == "FIN":      #! Fin de la partida.
+                    break   #! Sale del turno del jugador 1.
+                    
+
+        if estado[1] == "FIN":      #! Fin de la partida.
+            break   #! Sale del bucle de turnos para iniciar el fin de la partida.
         
         #! Desde acá empieza el jugador2.
         #! Se tiene que quedar en el bucle hasta que en el estado no exitstan errores (error-s1).
         while True:
-            print("Turno jugador 2")
             pe_jugador2.wait()          #! Espera a que el hilo jugador ponga el texto introducido por el usuario.
             
             msg1 = q_jugador2.get()     #! Lee el texto de el usuario.
@@ -332,13 +327,32 @@ def partida(jugadores):
             e_jugador2.set()        #! Establece que ya terminóde procesar y poner los elementos en la cola. 
         
             if estado[0]:           #! Sale del bucle porque no hay error en el estado.
-                print("Fuera del bucle porque no hay error en el estado: ", estado)
                 q_jugador1.put([msg1, tablero1, tablero2, estado])  
                 break
+            
             elif not(estado[0]):
-                print("ERROR DE TIPO S1, ACA NOS QUEDAMOS EN EL BUCLE DEL JUGADOR 2 HASTA QUE ESCRIBA BIEN. Error: ", estado[1])
+                
+                if estado[1] == "FIN":      #! Fin de la partida.
+                    break   #! Sale del turno del jugador 1.
+                    
 
-
+        if estado[1] == "FIN":      #! Fin de la partida.
+            break   #! Sale del bucle de turnos para iniciar el fin de la partida.
+        
+        
+        
+        #TODO Fin de la partida.
+        #TODO Deberia anunciar al ganador y pregutar a los clientes si desean finalizar la conexion o jugar otra vez.
+        #! Al cliente le llegará un mensaje por el metedo recv() con longitud cero. Cuando esto  
+        #! suceda, el cliente deberia cerrar su conexion con el .close() para liberar recursos.
+        
+        # s_jugador1 = jugadores[list(jugadores.keys())[0]]["s2"]
+        # s_jugador2 = jugadores[list(jugadores.keys())[1]]["s2"]
+        
+        # s_jugador1.close()      #! Deberia serrar la conexion con el cliente.
+        
+        
+        
 
 #! Procesamiento del disparo
 #! Tiene que devolver [mensaje, tabelro1, tablero2, estado]     (Estado = [True/False, descripcion])
@@ -356,16 +370,16 @@ def jugada(msg, tablero1, tablero2):
         fila = int(msg[0].translate(codificacion))
         columna = int(msg[1])
     except:
-        return "Valores no validos (error-s1)", tablero1, tablero2, [False, "error-s1"]
+        return "Valores no validos", tablero1, tablero2, [False, "error-s1"]
     
     if (fila > 9 or fila < 0 or columna > 9 or columna < 0):
-        return "Valores fuera de rango (error-s2)", tablero1, tablero2, [False, "error-s2"]
+        return "Valores fuera de rango", tablero1, tablero2, [False, "error-s2"]
     
 
 
     #* 2 - Revisar si ya se disparó en ese lugar (comprobar en disparos_enemigos en tablero 2).
     if tablero2["disparos_enemigos"].iloc[fila, columna] != " ":
-        return "Disparo realizado con aterioridad (error-s3)", tablero1, tablero2, [False, "error-s3"]
+        return "Disparo realizado con aterioridad", tablero1, tablero2, [False, "error-s3"]
     
     
     #* 3 - Comprobar si le dió a un barco y Guardar Tocado o Agua respectivamente.
@@ -437,19 +451,19 @@ def tipo_barco(letra):
 def juego(server):
     print("  Proceso 'Juego' ID:", os.getpid())
     
-    global clientes
-    clientes = {}
+    global clientes_objeto
+    clientes_objeto = []
     
     threading.Thread(target=aceptar_cliente, args=(server,)).start()
 
     #! Acá tiene que leer el diccionario y cada 2 en estado de espera crear una partida 
     while True:
-        jugadores_espera = {}
+        jugadores_espera = []
         
         #TODO Seccion critica?? Deberia ser accedido por un hilo a la vez (juego o aceptar_cliente).
-        for clave in clientes.keys():
-            if clientes[clave]["espera"]:
-                jugadores_espera[clave] = clientes[clave]
+        for cliente in clientes_objeto:
+            if cliente.espera:
+                jugadores_espera.append(cliente)
                 
                 #TODO Esta medio raro que hayan dos "if len() > 2:". Tener en cuenta que la variable jugadores_espera es pasada al hilo partida.
                 if len(jugadores_espera) >= 2:
@@ -460,16 +474,20 @@ def juego(server):
             print("++++++++++++++++++++ Se establecio una partida ++++++++++++++++++++")
             threading.Thread(target=partida, args=(jugadores_espera,)).start()
 
-            for clave in jugadores_espera.keys():
-                clientes[clave]["espera"] = False
+            for cliente in jugadores_espera:
+                cliente.espera = False
+        
+            jugadores_espera = []
+            
 
             time.sleep(300)
 
         else:
             print("++++++++++++++++++++ Esperando jugador nuevo ++++++++++++++++++++")
-            print("  Total de jugadores:", len(clientes.keys()))
+            print("  Total de jugadores:", len(clientes_objeto))
             print("  Jugadores en espera:", len(jugadores_espera))
             time.sleep(3)
+
 
 
 def señal(nro_senial, marco):
@@ -478,8 +496,8 @@ def señal(nro_senial, marco):
 
 
 def main():
-    args = argumentos()
-    server = abrir_socket(args)
+    ar = argumentos()
+    server = abrir_socket(ar)
     
     pid_padre = os.getpid()
     print("  Proceso main ID:", pid_padre)
@@ -514,7 +532,7 @@ if __name__ == '__main__':
 
 # Como cerramos las conexiones.
 
-# Cambiar el diccionario cliente por una clase cliente.
+#// Cambiar el diccionario cliente por una clase cliente.
 
 # Cambiar la variable global clientes por una variable compratida entre hilos del mismo proceso.
 
