@@ -10,7 +10,7 @@ def enviar_mensaje(s, m):
 
 
 def recibir_mensaje(s):
-    mensaje = s.recv(10000) 
+    mensaje = s.recv(100000) 
     return pickle.loads(mensaje)
 
 
@@ -96,6 +96,7 @@ def fin_partida(s):
 
 
 def juego(s):
+    print("///////////// Nueva partida")
     mensaje = recibir_mensaje(s)        
     print_mensaje(mensaje)
     
@@ -110,37 +111,6 @@ def juego(s):
         
     else:
         print("[ C {} ] ERROR INESPERADO EN EL SERVER.".format(hora_actual()))
-
-
-def jugador1_viejo(s):
-    # while True:
-        
-    #     #! Turno del Jugador 1.
-    #     respuesta = hacer_ataque(s)
-        
-    #     if respuesta[3][1] == "FIN":
-    #         print("[ C ] FIN DE LA PARTIDA, CONTINUAR O SALIR")
-    #         if fin_partida(s):
-    #             break       #! Sale del bucle, terminó la partida.
-            
-    #         else:
-    #             respuesta = recibir_mensaje(s)      #! Acá se queda esperando los tableros de la nueva partida.
-    #             print_mensaje(respuesta)                
-    #             continue    #! Se rinicia el bucle, nueva partida.
-            
-    #     #! Turno del Jugador 2.
-    #     respuesta = recibir_ataque(s)
-        
-    #     if respuesta[3][1] == "FIN":
-    #         print("[ C ] FIN DE LA PARTIDA, CONTINUAR O SALIR")
-    #         if fin_partida(s):
-    #             break       #! Sale del bucle, terminó la partida.
-            
-    #         else:
-    #             respuesta = recibir_mensaje(s)      #! Acá se queda esperando los tableros de la nueva partida.
-    #             print_mensaje(respuesta)
-    #             continue    #! Se rinicia el bucle, nueva partida.
-    pass
 
 
 def jugador1(s):
@@ -194,14 +164,14 @@ def jugador2(s):
                 
                 if fin_partida(s):
                     continuar_partida = False       #! Sale del bucle, terminó la partida.
-                    break       #! Sale del "for2 para poder terminar con el bucle.
+                    break       #! Sale del "for" para poder terminar con el bucle.
                 
                 else:
                     print("+++++++++++ Antes del nuevo mensaje")
                     respuesta = recibir_mensaje(s)      #! Acá se queda esperando los tableros de la nueva partida.
                     print("+++++++++++ Despues del nuevo mensaje")
                     print_mensaje(respuesta)  
-                    continuar_partida = True
+                    # continuar_partida = True
                     break       #! Sale del "for", por lo tanto, se rinicia el bucle (nueva partida). 
 
 

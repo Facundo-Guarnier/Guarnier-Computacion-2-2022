@@ -23,11 +23,11 @@ def f_cliente(cli):
     mensaje = cli.q1.get()
         
     if "1" == mensaje[3][1]: 
-        enviar_mensaje(cli.s1, mensaje)
+        enviar_mensaje(cli.s1, mensaje)     #! Creo que envia los tableros con barcos, sin disparos.
         jugador1(cli.s1, cli.q1, cli.e1, cli.pe)
         
     elif "2" == mensaje[3][1]:
-        enviar_mensaje(cli.s1, mensaje)
+        enviar_mensaje(cli.s1, mensaje)     #! Creo que envia los tableros con barcos, sin disparos.
         jugador2(cli.s1, cli.q1, cli.e1, cli.pe)
     
     else:
@@ -69,8 +69,14 @@ def jugador1(sock, q1, e1, pe):
                 break
             
             else:
-                msg2 = q1.get() #* Mensaje del resultado del disparo.
+                msg2 = q1.get()         #! Envia el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
                 enviar_mensaje(sock, msg2)
+                
+                # msg2 = q1.get()     #! Eenvia los tableros con barcos, sin disparos.
+                # enviar_mensaje(sock, msg2)
+                
+                # continue    #! Reinicia el bucle
+
         
         #! Desde acá deberia empezar el jugador2
         msg2 = q1.get()     #! Se queda esperando a que pueda conumir la respuesta al ataque del jugador 2 de la cola.
@@ -94,10 +100,9 @@ def jugador1(sock, q1, e1, pe):
 
 def jugador2(sock, q1, e1, pe):
     while True:
-        #! Desde acá deberia empezar el jugador1
+        #! Empeza el jugador 1.
         msg2 = q1.get()     #! Mensaje desde el hilo 'Partida'. Ataque jugador 1.
-        
-        enviar_mensaje(sock, msg2)
+        enviar_mensaje(sock, msg2)      #! Evnia el ataque del jugador 1 al cliente 2.
         
         if msg2[3][1] == "FIN":     #! Cuando se termina la partida, esto se debe a que el socket se cierra.
             msg1 = recibir_mensaje(sock)
@@ -110,8 +115,13 @@ def jugador2(sock, q1, e1, pe):
                 break
             
             else:
-                msg2 = q1.get() #* Mensaje del resultado del disparo.
+                #TODO Mejorar esto. Creo que no puede haber 2 q.get asi nomas
+                msg2 = q1.get()     #! Envia el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
                 enviar_mensaje(sock, msg2)
+                
+                msg2 = q1.get()     #! Eenvia los tableros con barcos, sin disparos.
+                enviar_mensaje(sock, msg2)
+                continue    #! Reinicia el bucle
         
         
         #! Desde acá deberia empezar el jugador2
@@ -130,7 +140,6 @@ def jugador2(sock, q1, e1, pe):
             
             enviar_mensaje(sock, msg2)
             
-            
             if msg2[3][0]:          #! Sale del bucle porque no hay error en el estado.
                 break
             
@@ -148,9 +157,8 @@ def jugador2(sock, q1, e1, pe):
             
             if msg1 == "salir":
                 break
-            
             else:
-                msg2 = q1.get() #* Mensaje del resultado del disparo.
+                msg2 = q1.get()     #! Mensaje del resultado del disparo.
                 enviar_mensaje(sock, msg2)
 
 
@@ -304,84 +312,83 @@ def matriz_barco_random():
     return matriz
 
 
+def turno(q_j, e_j, pe_j, tablero1, tablero2):
+    pe_j.wait()         #! Espera a que el hilo jugador ponga el texto introducido por el usuario.
+    
+    msg1 = q_j.get()     #! Lee el texto de el usuario.
+    
+    msg2, tablero1, tablero2, estado = jugada(msg1, tablero1, tablero2)     #! Procesar el texto del primer jugador.
+    
+    q_j.put([msg2, tablero1, tablero2, estado])     #! Enviar los resultados a los hilos jugadores.
+    
+    e_j.set()       #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
+    
+    return msg2, tablero1, tablero2, estado
+    
+
 #* Un hilo para cada partida (cada 2 jugadores).
 def partida(jugadores):
     print("  Hilo 'Partida' ID:", threading.get_native_id())
 
-    q_jugador1 = jugadores[0].q1
-    q_jugador2 = jugadores[1].q1
-    
-    e_jugador1 = jugadores[0].e1
-    e_jugador2 = jugadores[1].e1
-    
-    pe_jugador1 = jugadores[0].pe
-    pe_jugador2 = jugadores[1].pe
+    j1, j2 = jugadores 
 
+    q_j1 = j1.q1
+    q_j2 = j2.q1
     
-    #! tablero = {disparos_enemigos:DataFrame , mis_barcos:DataFrame, cant_hundidos:Int}
+    e_j1 = j1.e1
+    e_j2 = j2.e1
+    
+    pe_j1 = j1.pe
+    pe_j2 = j2.pe
+
     tablero1 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriz_barco_random(), "cant_hundidos": 0}     
     tablero2 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriz_barco_random(), "cant_hundidos": 0}
     
-
     #! Avisar a los jugadores que se encontró partida y quien es el jugador 1 y el 2.
-    q_jugador1.put(["Ningun mensaje", tablero1, tablero2,  [True, "1"]])
-    q_jugador2.put(["Ningun mensaje", tablero2, tablero1, [True, "2"]])
+    q_j1.put(["Ningun mensaje", tablero1, tablero2,  [True, "1"]])
+    q_j2.put(["Ningun mensaje", tablero2, tablero1, [True, "2"]])
     
-    #! Bucle para todas las jugadas.
-    while True:
-
-        #! Desde acá empieza el jugador1.
-        #! Se tiene que quedar en el bucle hasta que en el estado no exitstan errores (error-s1).
-        while True:
-            pe_jugador1.wait()          #! Espera a que el hilo jugador ponga el texto introducido por el usuario.
-            
-            msg1 = q_jugador1.get()     #! Lee el texto de el usuario.
-            
-            msg1, tablero1, tablero2, estado = jugada(msg1, tablero1, tablero2)     #! Procesar el texto del primer jugador.
-            
-            q_jugador1.put([msg1, tablero1, tablero2, estado])      #! Enviar los resultados a los hilos jugadores.
-            
-            e_jugador1.set()        #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
+    i=0
+    
+    while True:     #! Bucle para todas los turnos (partida completa).
         
-            if estado[0]:           #! Sale del bucle porque no hay error en el estado.
-                q_jugador2.put([msg1, tablero2, tablero1, estado])      #! Envia el resultado ya correcto, no envia al otro jugador todos los erores.
-                break
-
-            elif not(estado[0]):    #! Existe error, por lo tanto se queda en el bucle del jugador.    
-                pass    #! Solo para representar cuando hay error, no tiene ninguna funcion real.
-
-        
-        if estado[1] == "FIN":      #! Fin de la partida.
-            break   #! Sale del bucle de turnos para iniciar el fin de la partida.
-        
-        
-        #! Desde acá empieza el jugador2.
-        #! Se tiene que quedar en el bucle hasta que en el estado no exitstan errores (error-s1).
-        while True:
-            pe_jugador2.wait()          #! Espera a que el hilo jugador ponga el texto introducido por el usuario.
+        while True:     #! Bucle de errores.
             
-            msg1 = q_jugador2.get()     #! Lee el texto de el usuario.
-
-            msg1, tablero2, tablero1, estado = jugada(msg1, tablero2, tablero1)     #! Procesar el texto del primer jugador.
-            
-            q_jugador2.put([msg1, tablero2, tablero1, estado])      #! Enviar los resultados a los hilos jugadores.
+            if i%2 == 0:    #! Turno del jugador 1.
                 
-            e_jugador2.set()        #! Establece que ya terminóde procesar y poner los elementos en la cola. 
-        
-            if estado[0]:           #! Sale del bucle porque no hay error en el estado.
-                q_jugador1.put([msg1, tablero1, tablero2, estado])  
-                break
+                msg2, tablero1, tablero2, estado = turno(q_j1, e_j1, pe_j1, tablero1, tablero2)
+                
+                if estado[0]:           #! Sale del bucle porque no hay error en el estado.
+                    q_j2.put([msg2, tablero2, tablero1, estado])      #! Envia el resultado ya correcto, no envia al otro jugador todos los erores.
+                    break
+    
+                elif not(estado[0]):    #! Existe error, por lo tanto se queda en el bucle del jugador.    
+                    pass    #! Solo para representar cuando hay error, no tiene ninguna funcion real.
+
             
-            elif not(estado[0]):    #! Existe error, por lo tanto se queda en el bucle del jugador.    
-                pass    #! Solo para representar cuando hay error, no tiene ninguna funcion real.
-
-
+            elif i%2 == 1:  #! Turno del jugador 2.
+                
+                msg2, tablero2, tablero1, estado = turno(q_j2, e_j2, pe_j2, tablero2, tablero1)
+                
+                if estado[0]:           #! Sale del bucle porque no hay error en el estado.
+                    q_j1.put([msg2, tablero1, tablero2, estado])    #! Envia el resultado ya correcto, no envia al otro jugador todos los erores.
+                    break
+                
+                elif not(estado[0]):    #! Existe error, por lo tanto se queda en el bucle del jugador.    
+                    pass    #! Solo para representar cuando hay error, no tiene ninguna funcion real.
+        
+        i+=1    #! Cuando no hay errores, pasa al proximo turno.
+        
         if estado[1] == "FIN":      #! Fin de la partida.
             break   #! Sale del bucle de turnos para iniciar el fin de la partida.
-    
-    
-    threading.Thread(target=fin_partida, args=(jugadores[0],), name="Fin de partida 1").start()
-    threading.Thread(target=fin_partida, args=(jugadores[1],), name="Fin de partida 2").start()
+        
+    threading.Thread(target=fin_partida, args=(j1,), name="Fin de partida del jugador 1").start()
+    threading.Thread(target=fin_partida, args=(j2,), name="Fin de partida del jugador 2").start()
+
+        
+        
+        
+        
         
 
 #! Fin de la partida por cada jugador.
@@ -584,8 +591,11 @@ if __name__ == '__main__':
 
 
 #TODO: En orden de prioridades.
-#* Cuando el jugador 1 sale de la partida y el 2 continua, este ultimo no arranca de forma correcta. Creo que el
-#* server no le envia los nuevos tableros. Si el jugador 1 siguie en otra partida funciona de forma correcta.
+#* Arreglar del lado del cliente que cuando empeiza una nueva partida, despues de haber jugado una, 
+#* el cliente deberia volver a ver si es el jugador 1 o el 2. Pero eso no lo hace. Esto se arregla
+#* en las funciones jugador1(s) y jugador2(s) modificando el "while continuar_partida". Posiblemente si hago 
+#* que las funciones jugador1 y 2 devuelvan un booleano y eliminar el bucle de talvez "while continuar_partida" y 
+#* poniendolo en la funcion "juego(S)" se arregla. 
 
 #// Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi)
 
