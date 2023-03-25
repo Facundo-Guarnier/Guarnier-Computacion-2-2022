@@ -52,19 +52,44 @@ def jugador1(sock, q1, e1, pe):
             enviar_mensaje(sock, msg2)
             
             if msg2[3][0]:          
-                if msg2[3][1] == "FIN":
-                    print("Entraste en el pass del jugador1")
-                    pass
-                else:
-                    break   #! Sale del bucle porque no hay error en el estado.
+                break   #! Sale del bucle porque no hay error en el estado.
             
             elif not(msg2[3][0]):   #! Existe error. 
                 print("hilo jugador1, existe error, me quedo en el bucle")    
                 pass
         
+        if msg2[3][1] == "FIN":     #! Cuando se termina la partida, esto se debe a que el socket se cierra.
+            msg1 = recibir_mensaje(sock)
+            q1.put(msg1)     
+            pe.wait()       
+            e1.wait()       
+            e1.clear()
+            
+            if msg1 == "salir":
+                break
+            
+            else:
+                msg2 = q1.get() #* Mensaje del resultado del disparo.
+                enviar_mensaje(sock, msg2)
+        
         #! Desde acá deberia empezar el jugador2
         msg2 = q1.get()     #! Se queda esperando a que pueda conumir la respuesta al ataque del jugador 2 de la cola.
         enviar_mensaje(sock, msg2)
+        
+        
+        if msg2[3][1] == "FIN":     #! Cuando se termina la partida, esto se debe a que el socket se cierra.
+            msg1 = recibir_mensaje(sock)
+            q1.put(msg1)     
+            pe.wait()       
+            e1.wait()       
+            e1.clear()
+            
+            if msg1 == "salir":
+                break
+            
+            else:
+                msg2 = q1.get() #* Mensaje del resultado del disparo.
+                enviar_mensaje(sock, msg2)
 
 
 def jugador2(sock, q1, e1, pe):
@@ -73,6 +98,21 @@ def jugador2(sock, q1, e1, pe):
         msg2 = q1.get()     #! Mensaje desde el hilo 'Partida'. Ataque jugador 1.
         
         enviar_mensaje(sock, msg2)
+        
+        if msg2[3][1] == "FIN":     #! Cuando se termina la partida, esto se debe a que el socket se cierra.
+            msg1 = recibir_mensaje(sock)
+            q1.put(msg1)     
+            pe.wait()       
+            e1.wait()       
+            e1.clear()
+            
+            if msg1 == "salir":
+                break
+            
+            else:
+                msg2 = q1.get() #* Mensaje del resultado del disparo.
+                enviar_mensaje(sock, msg2)
+        
         
         #! Desde acá deberia empezar el jugador2
         while True:     #! Bucle si es que existe un error en el estado.
@@ -92,14 +132,26 @@ def jugador2(sock, q1, e1, pe):
             
             
             if msg2[3][0]:          #! Sale del bucle porque no hay error en el estado.
-                if msg2[3][1] == "FIN":
-                    pass
-                else:
-                    break
+                break
             
             elif not(msg2[3][0]):   #! Existe error. 
                 print("hilo jugador2, existe error, me quedo en el bucle")    
                 pass
+            
+            
+        if msg2[3][1] == "FIN":     #! Cuando se termina la partida, esto se debe a que el socket se cierra.
+            msg1 = recibir_mensaje(sock)
+            q1.put(msg1)     
+            pe.wait()       
+            e1.wait()       
+            e1.clear()
+            
+            if msg1 == "salir":
+                break
+            
+            else:
+                msg2 = q1.get() #* Mensaje del resultado del disparo.
+                enviar_mensaje(sock, msg2)
 
 
 def argumentos():
@@ -130,20 +182,20 @@ def base_datos():
 def aceptar_cliente(server):
     print("  Hilo 'Aceptar_cliente' ID:", threading.get_native_id())
     
-    i = 0
+    j=1
     while True:
         s2,addr = server.accept()
         print("-------------------------------------")
-        print("  Nuevo cliente {}". format(addr))
+        print("  Nuevo cliente {} {}". format(j, addr))
         print("  Proceso padre ID:", os.getpid())
         
         global clientes_objeto
-        nickname = "Jugador" + str(i+1)
+        i = len(clientes_objeto)
+        nickname = "Jugador" + str(j)
         clientes_objeto.append(C_Cliente(s2, addr, nickname))
         
-        threading.Thread(target=f_cliente, args=(clientes_objeto[i],)).start()
-        
-        i += 1
+        threading.Thread(target=f_cliente, args=(clientes_objeto[i],), name="Cliente {}".format(j)).start()
+        j+=1
 
 
 def matriz_inicial():
@@ -160,7 +212,6 @@ def matriz_barco_random():
     contador_error = 0
     tipos = ["L", "F", "D", "S", "P"]  
     tamaño = 4
-    # print("\n+++++++++++++++++++++ Nueva matriz +++++++++++++++++++++++++\nMatriz barco:\n", matriz)
     while len(tipos) > 0:
         barco = tipos.pop()
         n1 = random.randint(1, 2)
@@ -172,29 +223,25 @@ def matriz_barco_random():
             while not(estado):
                 x_inicio = random.randint(0, 9)
                 y = random.randint(0, 9)
-                x_final = x_inicio + tamaño     #Hacia la derecha
+                x_final = x_inicio + tamaño         #! Hacia la derecha
                 derecha = True
 
                 if x_final > 9 or x_final < 0:
-                    x_final = x_inicio - tamaño #Hacia la izquerda
+                    x_final = x_inicio - tamaño     #! Hacia la izquerda
                     derecha = False
                 
-                # print("\n--------------------------------------------------------\nX incio {}, x fin {}, barco {}".format(x_inicio,x_final, barco))
                 estado = True
                 for i in range(tamaño+1):
                     if derecha:
                         if matriz.iloc[y, x_inicio+i] != " ":
                             estado = False
-                            # print("Intento fallido de establecer el barco {} (error-s4)".format(barco))
                             contador_error += 1
                             
                     else:
                         if matriz.iloc[y, x_inicio-i] != " ":
                             estado = False
-                            # print("Intento fallido de establecer el barco {} (error-s5)".format(barco))
                             contador_error += 1
                         
-                # print("Estado {} del barco {}".format(estado, barco))
                 if estado and derecha:
                     for i in range(tamaño+1):
                         matriz.iloc[y, x_inicio+i] = barco
@@ -219,27 +266,23 @@ def matriz_barco_random():
             while not(estado):
                 y_inicio = random.randint(0, 9)
                 x = random.randint(0, 9)
-                y_final = y_inicio + tamaño     #Hacia abajo
+                y_final = y_inicio + tamaño         #! Hacia abajo
                 abajo = True
                 if y_final > 9 or y_final < 0:
-                    y_final = y_inicio - tamaño #Hacia arriba
+                    y_final = y_inicio - tamaño     #! Hacia arriba
                     abajo = False
                     
-                # print("\n--------------------------------------------------------\nY incio {}, Y fin {}, barco {}".format(y_inicio,y_final, barco))
                 estado = True
                 for i in range(tamaño+1):
                     if abajo:
                         if matriz.iloc[y_inicio+i, x] != " ":
                             estado = False
-                            # print("Intento fallido de establecer el barco {} (error-s6)".format(barco))
                             contador_error += 1
                         else:
                             if matriz.iloc[y_inicio-i, x] != " ":
                                 estado = False
-                                # print("Intento fallido de establecer el barco {} (error-s7)".format(barco))
                                 contador_error += 1
                         
-                # print("Estado {} del barco {}".format(estado, barco))
                 if estado and abajo:
                     for i in range(tamaño+1):
                         matriz.iloc[y_inicio+i, x] = barco
@@ -284,7 +327,7 @@ def partida(jugadores):
     q_jugador1.put(["Ningun mensaje", tablero1, tablero2,  [True, "1"]])
     q_jugador2.put(["Ningun mensaje", tablero2, tablero1, [True, "2"]])
     
-    #! Siempre empieza el jugador 1. 
+    #! Bucle para todas las jugadas.
     while True:
 
         #! Desde acá empieza el jugador1.
@@ -337,8 +380,8 @@ def partida(jugadores):
             break   #! Sale del bucle de turnos para iniciar el fin de la partida.
     
     
-    threading.Thread(target=fin_partida, args=(jugadores[0],)).start()
-    threading.Thread(target=fin_partida, args=(jugadores[1],)).start()
+    threading.Thread(target=fin_partida, args=(jugadores[0],), name="Fin de partida 1").start()
+    threading.Thread(target=fin_partida, args=(jugadores[1],), name="Fin de partida 2").start()
         
 
 #! Fin de la partida por cada jugador.
@@ -349,35 +392,30 @@ def fin_partida(jugador):
     
     global clientes_objeto
     
-    print("Entraste en fin_partida", jugador.nickname)
+    print(jugador.nickname, "Entraste en fin_partida", threading.get_native_id())
     
-    #! Jugador1
-    
-    print("Antes del pe", jugador.nickname)
     jugador.pe.wait()       #! Espera a que el hilo jugador ponga el texto introducido por el usuario.
-    print("Despues del pe", jugador.nickname)
     
     msg1 = jugador.q1.get()     #! Lee el texto de el usuario. 
     
-    print("MENSAJE: ", msg1)
     
     if msg1=="continuar": 
-        print("Entraste en continuar", jugador.nickname)
+        print(jugador.nickname, "Entraste en continuar")
         jugador.q1.put(["Buscando proxima partida...", "", "", [True, "Continuar"]])      #! Enviar los resultados al hilo jugador.
         jugador.e1.set()        #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
         
         jugador.espera = True
-        #TODO Resetiar todo los atributos.
     
     elif msg1=="salir":
-        print("Entraste en salir", jugador.nickname)
-        jugador.q1.put(["finalizando y desconectando...", "", "", [False, "Desconexion"]])      #! Enviar los resultados al hilo jugador.
+        print(jugador.nickname, "Entraste en salir")
+        jugador.q1.put(["Finalizando y desconectando...", "", "", [False, "Desconexion"]])      #! Enviar los resultados al hilo jugador.
         jugador.e1.set()        #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
-        jugador.s2.close()
+        jugador.s1.close()
         
         #! Busca y elimina al jugador de la lista de jugadores.
         for cliente in clientes_objeto:
             if cliente.nickname == jugador.nickname:
+                print(jugador.nickname, "Entraste en borrar jugador.")
                 clientes_objeto.remove(cliente)
 
 
@@ -476,14 +514,14 @@ def tipo_barco(letra):
 
 
 #* Proceso juego.  
-#! Acá tiene que agregar al diccionario las conexiones
+#! Se crean las instancias de los clientes.
 def juego(server):
     print("  Proceso 'Juego' ID:", os.getpid())
     
     global clientes_objeto
     clientes_objeto = []
     
-    threading.Thread(target=aceptar_cliente, args=(server,)).start()
+    threading.Thread(target=aceptar_cliente, args=(server,), name="Aceptar cliente").start()
 
     #! Acá tiene que leer el diccionario y cada 2 en estado de espera crear una partida 
     while True:
@@ -501,7 +539,7 @@ def juego(server):
         
         if len(jugadores_espera) >= 2:
             print("++++++++++++++++++++ Se establecio una partida ++++++++++++++++++++")
-            threading.Thread(target=partida, args=(jugadores_espera,)).start()
+            threading.Thread(target=partida, args=(jugadores_espera,), name="Partida").start()
 
             for cliente in jugadores_espera:
                 cliente.espera = False
@@ -546,7 +584,7 @@ if __name__ == '__main__':
 
 
 #TODO: En orden de prioridades.
-# Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi)
+#* Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi)
 
 #// Condicion de fin de la partida cuando se hunden todos los barcos, los clientes 
 #// deberian terminan pero no lo hacen, el server detecta bien la condicion.
@@ -558,7 +596,7 @@ if __name__ == '__main__':
 
 # El click del GUI quedó a medio camino.
 
-# Como cerramos las conexiones.
+#// Como cerramos las conexiones.
 
 #// Cambiar el diccionario cliente por una clase cliente.
 
@@ -568,14 +606,14 @@ if __name__ == '__main__':
 
 # Ver si se puede con IPv4 y v6.
 
-# Usar MongoBD  .
+# Usar MongoBD.
 
 # Cada usuario pueda poner su nickname personalizado.
 
 # ¿Como borrar un cliente que se desconectó con "ctrl + c"?
 
 # Poner una seccion critica a las variables globales
-# Seccion critica??? En todo los lugares en que esté un q1 y e1.
+# Seccion critica??? En todo los lugares en que esté un q1.
 
 # Investigar threading.RLock(), threading.BoundedSemaphore(), threading.Condition().
 

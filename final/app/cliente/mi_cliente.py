@@ -84,14 +84,14 @@ def fin_partida(s):
             print("[ C ] Entraste en continuar")
             enviar_mensaje(s, msg1)
             mensaje = recibir_mensaje(s)        
-            print(mensaje)
+            print("[ S ]", mensaje)
             return False
         
         elif msg1 == "salir":
             print("[ C ] Entraste en salir")
             enviar_mensaje(s, msg1)
             mensaje = recibir_mensaje(s)        
-            print(mensaje)
+            print("[ S ]", mensaje)
             return True
         
         else: 
