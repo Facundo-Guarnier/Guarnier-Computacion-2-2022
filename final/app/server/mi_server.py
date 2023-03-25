@@ -584,7 +584,10 @@ if __name__ == '__main__':
 
 
 #TODO: En orden de prioridades.
-#* Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi)
+#* Cuando el jugador 1 sale de la partida y el 2 continua, este ultimo no arranca de forma correcta. Creo que el
+#* server no le envia los nuevos tableros. Si el jugador 1 siguie en otra partida funciona de forma correcta.
+
+#// Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi)
 
 #// Condicion de fin de la partida cuando se hunden todos los barcos, los clientes 
 #// deberian terminan pero no lo hacen, el server detecta bien la condicion.
@@ -613,7 +616,6 @@ if __name__ == '__main__':
 # ¿Como borrar un cliente que se desconectó con "ctrl + c"?
 
 # Poner una seccion critica a las variables globales
-# Seccion critica??? En todo los lugares en que esté un q1.
 
 # Investigar threading.RLock(), threading.BoundedSemaphore(), threading.Condition().
 
