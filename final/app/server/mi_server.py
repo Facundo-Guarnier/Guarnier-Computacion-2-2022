@@ -18,16 +18,16 @@ def recibir_mensaje(s):
 
 #* Un hilo para cada uno de los clientes.
 def f_cliente(cli):   
-    print("  Hilo 'Conexion' ID:", threading.get_native_id())
+    print("  Hilo 'Conexión' ID:", threading.get_native_id())
 
     mensaje = cli.q1.get()
         
     if "1" == mensaje[3][1]: 
-        enviar_mensaje(cli.s1, mensaje)     #! Creo que envia los tableros con barcos, sin disparos.
+        enviar_mensaje(cli.s1, mensaje)     #! Creo que envía los tableros con barcos, sin disparos.
         jugador1(cli.s1, cli.q1, cli.e1, cli.pe)
         
     elif "2" == mensaje[3][1]:
-        enviar_mensaje(cli.s1, mensaje)     #! Creo que envia los tableros con barcos, sin disparos.
+        enviar_mensaje(cli.s1, mensaje)     #! Creo que envía los tableros con barcos, sin disparos.
         jugador2(cli.s1, cli.q1, cli.e1, cli.pe)
     
     else:
@@ -69,17 +69,17 @@ def jugador1(sock, q1, e1, pe):
                 break
             
             else:
-                msg2 = q1.get()         #! Envia el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
+                msg2 = q1.get()         #! Envía el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
                 enviar_mensaje(sock, msg2)
                 
-                # msg2 = q1.get()     #! Eenvia los tableros con barcos, sin disparos.
+                # msg2 = q1.get()     #! Envía los tableros con barcos, sin disparos.
                 # enviar_mensaje(sock, msg2)
                 
                 # continue    #! Reinicia el bucle
 
         
         #! Desde acá deberia empezar el jugador2
-        msg2 = q1.get()     #! Se queda esperando a que pueda conumir la respuesta al ataque del jugador 2 de la cola.
+        msg2 = q1.get()     #! Se queda esperando a que pueda consumir la respuesta al ataque del jugador 2 de la cola.
         enviar_mensaje(sock, msg2)
         
         
@@ -100,9 +100,9 @@ def jugador1(sock, q1, e1, pe):
 
 def jugador2(sock, q1, e1, pe):
     while True:
-        #! Empeza el jugador 1.
+        #! Empieza el jugador 1.
         msg2 = q1.get()     #! Mensaje desde el hilo 'Partida'. Ataque jugador 1.
-        enviar_mensaje(sock, msg2)      #! Evnia el ataque del jugador 1 al cliente 2.
+        enviar_mensaje(sock, msg2)      #! Envía el ataque del jugador 1 al cliente 2.
         
         if msg2[3][1] == "FIN":     #! Cuando se termina la partida, esto se debe a que el socket se cierra.
             msg1 = recibir_mensaje(sock)
@@ -116,10 +116,10 @@ def jugador2(sock, q1, e1, pe):
             
             else:
                 #TODO Mejorar esto. Creo que no puede haber 2 q.get asi nomas
-                msg2 = q1.get()     #! Envia el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
+                msg2 = q1.get()     #! Envía el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
                 enviar_mensaje(sock, msg2)
                 
-                msg2 = q1.get()     #! Eenvia los tableros con barcos, sin disparos.
+                msg2 = q1.get()     #! Envía los tableros con barcos, sin disparos.
                 enviar_mensaje(sock, msg2)
                 continue    #! Reinicia el bucle
         
@@ -181,7 +181,7 @@ def abrir_socket(args):
     return s
 
 
-#TODO Conexion con la BD
+#TODO Conexión con la BD
 def base_datos():
     pass
 
@@ -235,7 +235,7 @@ def matriz_barco_random():
                 derecha = True
 
                 if x_final > 9 or x_final < 0:
-                    x_final = x_inicio - tamaño     #! Hacia la izquerda
+                    x_final = x_inicio - tamaño     #! Hacia la izquierda
                     derecha = False
                 
                 estado = True
@@ -345,8 +345,8 @@ def partida(jugadores):
     tablero2 = {"disparos_enemigos": matriz_inicial(), "mis_barcos": matriz_barco_random(), "cant_hundidos": 0}
     
     #! Avisar a los jugadores que se encontró partida y quien es el jugador 1 y el 2.
-    q_j1.put(["Ningun mensaje", tablero1, tablero2,  [True, "1"]])
-    q_j2.put(["Ningun mensaje", tablero2, tablero1, [True, "2"]])
+    q_j1.put(["Ningún mensaje", tablero1, tablero2,  [True, "1"]])
+    q_j2.put(["Ningún mensaje", tablero2, tablero1, [True, "2"]])
     
     i=0
     
@@ -359,7 +359,7 @@ def partida(jugadores):
                 msg2, tablero1, tablero2, estado = turno(q_j1, e_j1, pe_j1, tablero1, tablero2)
                 
                 if estado[0]:           #! Sale del bucle porque no hay error en el estado.
-                    q_j2.put([msg2, tablero2, tablero1, estado])      #! Envia el resultado ya correcto, no envia al otro jugador todos los erores.
+                    q_j2.put([msg2, tablero2, tablero1, estado])      #! Envía el resultado ya correcto, no envía al otro jugador todos los erores.
                     break
     
                 elif not(estado[0]):    #! Existe error, por lo tanto se queda en el bucle del jugador.    
@@ -371,7 +371,7 @@ def partida(jugadores):
                 msg2, tablero2, tablero1, estado = turno(q_j2, e_j2, pe_j2, tablero2, tablero1)
                 
                 if estado[0]:           #! Sale del bucle porque no hay error en el estado.
-                    q_j1.put([msg2, tablero1, tablero2, estado])    #! Envia el resultado ya correcto, no envia al otro jugador todos los erores.
+                    q_j1.put([msg2, tablero1, tablero2, estado])    #! Envía el resultado ya correcto, no envía al otro jugador todos los erores.
                     break
                 
                 elif not(estado[0]):    #! Existe error, por lo tanto se queda en el bucle del jugador.    
@@ -392,9 +392,9 @@ def partida(jugadores):
         
 
 #! Fin de la partida por cada jugador.
-#! Anuncia al ganador y pregutar al cliente si desean finalizar la conexion o jugar otra vez.
-#! Al cliente le llegará un mensaje por el metedo recv() con longitud cero. Cuando esto  
-#! suceda, el cliente deberia cerrar su conexion con el .close() para liberar recursos.
+#! Anuncia al ganador y preguntar al cliente si desean finalizar la conexión o jugar otra vez.
+#! Al cliente le llegará un mensaje por el método recv() con longitud cero. Cuando esto  
+#! suceda, el cliente deberia cerrar su conexión con el .close() para liberar recursos.
 def fin_partida(jugador):
     
     global clientes_objeto
@@ -415,7 +415,7 @@ def fin_partida(jugador):
     
     elif msg1=="salir":
         print(jugador.nickname, "Entraste en salir")
-        jugador.q1.put(["Finalizando y desconectando...", "", "", [False, "Desconexion"]])      #! Enviar los resultados al hilo jugador.
+        jugador.q1.put(["Finalizando y desconectando...", "", "", [False, "Desconexión"]])      #! Enviar los resultados al hilo jugador.
         jugador.e1.set()        #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
         jugador.s1.close()
         
@@ -428,7 +428,7 @@ def fin_partida(jugador):
 
 
 #! Procesamiento del disparo
-#! Tiene que devolver [mensaje, tabelro1, tablero2, estado]     (Estado = [True/False, descripcion])
+#! Tiene que devolver [mensaje, tablero1, tablero2, estado]     (Estado = [True/False, descripcion])
 #! Errores: s1=Valores no validos, s2=Valores fuera de rango, s3=Disparo ya realizado, 
 #! tablero = {disparos_enemigos:DataFrame , mis_barcos:DataFrame, cant_hundidos:Int}
 def jugada(msg, tablero1, tablero2):
@@ -452,7 +452,7 @@ def jugada(msg, tablero1, tablero2):
 
     #* 2 - Revisar si ya se disparó en ese lugar (comprobar en disparos_enemigos en tablero 2).
     if tablero2["disparos_enemigos"].iloc[fila, columna] != " ":
-        return "Disparo realizado con aterioridad", tablero1, tablero2, [False, "error-s3"]
+        return "Disparo realizado con anterioridad", tablero1, tablero2, [False, "error-s3"]
     
     
     #* 3 - Comprobar si le dió a un barco y Guardar Tocado o Agua respectivamente.
@@ -463,7 +463,7 @@ def jugada(msg, tablero1, tablero2):
     else:
         tablero2["disparos_enemigos"].iloc[fila, columna] = "T"     #! Tocado
         
-        #* 3.1 - Revisar si el barco está undido. 
+        #* 3.1 - Revisar si el barco está hundido. 
         #! Barco hundido
         #! Contar sobre el eje 'X' o sobre el eje 'Y' si hay x cantidad de tocados partiendo desde msg
         if (es_hundido(fila, columna, tablero2)):
@@ -475,7 +475,7 @@ def jugada(msg, tablero1, tablero2):
                 return "Todos los barcos han sido hundidos!!!", tablero1, tablero2, [True, "FIN"]
         
             else:
-                return "HUNDIDO!! El disparo fue certero, {} fuen hundido.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2, [True, "Hundido"]
+                return "HUNDIDO!! El disparo fue certero, {} fue hundido.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2, [True, "Hundido"]
 
         #! Barco no hundido
         else:
@@ -545,7 +545,7 @@ def juego(server):
         
         
         if len(jugadores_espera) >= 2:
-            print("++++++++++++++++++++ Se establecio una partida ++++++++++++++++++++")
+            print("++++++++++++++++++++ Se estableció una partida ++++++++++++++++++++")
             threading.Thread(target=partida, args=(jugadores_espera,), name="Partida").start()
 
             for cliente in jugadores_espera:
@@ -575,7 +575,7 @@ def main():
 
     signal.signal(signal.SIGINT, señal)
 
-    #! Proceso de todas las partidas y clienets
+    #! Proceso de todas las partidas y clientes
     p_juego = multiprocessing.Process(target=juego, args=(server,)).start()
 
     #! Proceso BD
@@ -591,29 +591,27 @@ if __name__ == '__main__':
 
 
 #TODO: En orden de prioridades.
-#* Arreglar del lado del cliente que cuando empeiza una nueva partida, despues de haber jugado una, 
+#* Arreglar del lado del cliente que cuando empieza una nueva partida, despues de haber jugado una, 
 #* el cliente deberia volver a ver si es el jugador 1 o el 2. Pero eso no lo hace. Esto se arregla
 #* en las funciones jugador1(s) y jugador2(s) modificando el "while continuar_partida". Posiblemente si hago 
 #* que las funciones jugador1 y 2 devuelvan un booleano y eliminar el bucle de talvez "while continuar_partida" y 
-#* poniendolo en la funcion "juego(S)" se arregla. 
+#* poniéndolo en la funcion "juego(S)" se arregla. 
 
 #// Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi)
 
-#// Condicion de fin de la partida cuando se hunden todos los barcos, los clientes 
-#// deberian terminan pero no lo hacen, el server detecta bien la condicion.
+#// Condición de fin de la partida cuando se hunden todos los barcos, los clientes 
+#// deberían terminan pero no lo hacen, el server detecta bien la condición.
 
 #// Que vuelva a jugar el mismo jugador cuando el disparo es en un lugar que ya disparó. 
 
-#// Volver a dar el turno al jugador que se equivocó de coordenas (mal escritas). Esto deberia ser 
-#// por lado del server y no del cliente. Hay una solucion propuesta desde el lado del cliente.
-
-# El click del GUI quedó a medio camino.
+#// Volver a dar el turno al jugador que se equivocó de coordinas (mal escritas). Esto deberia ser 
+#// por lado del server y no del cliente. Hay una solución propuesta desde el lado del cliente.
 
 #// Como cerramos las conexiones.
 
 #// Cambiar el diccionario cliente por una clase cliente.
 
-# Cambiar la variable global clientes por una variable compratida entre hilos del mismo proceso.
+# Cambiar la variable global clientes por una variable compartida entre hilos del mismo proceso.
 
 # Separar los barcos un lugar a los costados, no se pueden estar tocando.
 
@@ -623,10 +621,12 @@ if __name__ == '__main__':
 
 # Cada usuario pueda poner su nickname personalizado.
 
+# El click del GUI quedó a medio camino.
+
 # ¿Como borrar un cliente que se desconectó con "ctrl + c"?
 
 # Poner una seccion critica a las variables globales
 
 # Investigar threading.RLock(), threading.BoundedSemaphore(), threading.Condition().
 
-#//  Ver como matar al proceso "online" cuando muere el main. Señal de ctrl + c para que tambien se la envíe al hijo. 
+#//  Ver como matar al proceso "online" cuando muere el main. Señal de ctrl + c para que también se la envíe al hijo. 

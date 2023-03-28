@@ -14,8 +14,8 @@ El código debe solucionar un problema haciendo uso de las herramientas vistas e
 * Uso de mecanismos de IPC (Inter-Process Communication). 
    > Pipe 
    > Queue 
-   > Memoria compratida (multiprocessing.Value(), multiprocessing.Array()).
-   > Event y Barrier no son tecnicamentes IPC ya que son entre hilos y no entre proceso.
+   > Memoria compartida (multiprocessing.Value(), multiprocessing.Array()).
+   > Event y Barrier no son técnicamente IPC ya que son entre hilos y no entre proceso.
 
 * Uso de asincronismo de I/O.
    > asyncio (No se donde usarlo en el lado del server.)

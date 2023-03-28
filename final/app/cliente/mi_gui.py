@@ -31,7 +31,7 @@ def recibir_mensaje(s):
 def salir(r):
     r.destroy()
     r.quit()
-    #TODO y cerrar la conexion
+    #TODO y cerrar la conexión
     pass
 
 
@@ -39,9 +39,9 @@ def crear_cuadricula(tablero):
     y_tablero = -1  # Para el tag
     x_tablero = -1
     
-    for x in range(0,352,32):   # Cada 32 pixeles se hace un rectangulo (352 / 11 = 32)
+    for x in range(0,352,32):   # Cada 32 pixeles se hace un rectángulo (352 / 11 = 32)
         for y in range(0,352,32):
-            #! Los rectangulos tienen el mismo tag que los textos, para poder hacer click.
+            #! Los rectángulos tienen el mismo tag que los textos, para poder hacer click.
             tablero.create_rectangle(x,y,x+32, y+32, fill='gray15', tags="{}{}".format(y_tablero,x_tablero))
             y_tablero += 1
         y_tablero = -1
@@ -63,7 +63,7 @@ def on_board_click(event,q1,e1):
     if event.widget.find_withtag(tkinter.CURRENT):
         print("DENTRO DEL IF")
         print("TAG del casillero: ", event.widget.itemcget(tkinter.CURRENT, "tag"))   #! Obtener el tag      
-        q1.put(event.widget.itemcget(tkinter.CURRENT, "tag"))   #! Envia el tag al hilo de enviar/recibir.  
+        q1.put(event.widget.itemcget(tkinter.CURRENT, "tag"))   #! Envía el tag al hilo de enviar/recibir.  
 
 
 def encabezado_tablero(tablero):
@@ -88,7 +88,7 @@ def barcos_tableros(tablero1, tablero2, s, q1, e1):
     y_tabla = 0
     for y_gui in range(32,352,32):
         for x_gui in range(32,352,32):
-            #! Los textos tienen el mismo tag que los rectangulos, para poder hacer click.
+            #! Los textos tienen el mismo tag que los rectángulos, para poder hacer click.
             tablero1.create_text(16+x_gui,16+y_gui, text=mis_barcos.iloc[y_tabla, x_tabla][0], fill='red2', font = ('Arial', 18), tag="{}{}".format(y_tabla, x_tabla))        
             x_tabla += 1
         x_tabla = 0    
@@ -101,7 +101,7 @@ def barcos_tableros(tablero1, tablero2, s, q1, e1):
     y_tabla = 0
     for y_gui in range(32,352,32):
         for x_gui in range(32,352,32):
-            #! Los textos tienen el mismo tag que los rectangulos, para poder hacer click.
+            #! Los textos tienen el mismo tag que los rectángulos, para poder hacer click.
             tablero2.create_text(16+x_gui,16+y_gui, text=mis_disparos.iloc[y_tabla, x_tabla][0], fill='red2', font = ('Arial', 18), tag="{}{}".format(y_tabla, x_tabla))        
             x_tabla += 1
         x_tabla = 0    
@@ -112,8 +112,8 @@ def barcos_tableros(tablero1, tablero2, s, q1, e1):
     if "1" == jugador:
         
         #? COMO SE CUANDO TENGO QUE ATACAR O CUANDO TENGO QUE ESPERAR A SER ATACADO?? EL SERVER DEBERIA MANDAR UN TIPO DE SEÑAL, YA QUE 
-        #? NO NECEASRIAMENTE SIEMPRE VA A SEGUIR UN ORDEN EN ESPECIDICO: 
-        #?   1°: ATACO -> RECIBO ESTADO DE MI ACATQUE -> RECIBO ESTADO DEL ATAQUE HACIA MI
+        #? NO NECEASRIAMENTE SIEMPRE VA A SEGUIR UN ORDEN EN ESPECIFICO: 
+        #?   1°: ATACO -> RECIBO ESTADO DE MI ATAQUE -> RECIBO ESTADO DEL ATAQUE HACIA MI
         #?   2°: ATACO -> RECIBO QUE INGRESÉ MAL LAS COORDENADAS -> VUELVO A INGRESAR MAL LAS COORDENADAS -> ETC.
         
         #* Si es jugador 1 no deberia esperar, sino directamente enviar el disparo.
@@ -145,7 +145,7 @@ def gui(s):
     #T* Titulo
     frame_titulo = tkinter.Frame(frame_principal, width=800, height=50, bg="black")
     frame_titulo.grid(row=0, column=0)
-    # frame_titulo.grid_propagate(False)   #! No ajusta el tamaño del freame al contenido
+    # frame_titulo.grid_propagate(False)   #! No ajusta el tamaño del frame al contenido
 
     b_salir = tkinter.Button(frame_titulo, text="Salir", bg='orange', command=functools.partial(salir, raiz))
     b_salir.grid(row=0, column=0)
@@ -154,7 +154,7 @@ def gui(s):
     #T* Frame para cada tableros
     frame_tableros = tkinter.Frame(frame_principal, width=800, height=550, bg="green")
     frame_tableros.grid(row=1, column=0)
-    frame_tableros.grid_propagate(False)   #! No ajusta el tamaño del freame al contenido
+    frame_tableros.grid_propagate(False)   #! No ajusta el tamaño del frame al contenido
 
     titulo1 = tkinter.Label(frame_tableros, text="Tablero 1:", font=("Arial", 18), padx=5, pady=5)
     titulo1.grid(row=0, column=0, padx=5, pady=5)
@@ -174,10 +174,10 @@ def gui(s):
     
     
     #T* Funcion de click en el tablero para disparar/atacar
-    q1 = queue.Queue()      #! Para enviar el click con el evniar/recibir.
+    q1 = queue.Queue()      #! Para enviar el click con el enviar/recibir.
     e1 = threading.Event()  #! Para no estar haciendo click cuando no se debe.
     
-    #TODO Revisar como funciona biente esto, <Button-1> es clic izquierdo.
+    #TODO Revisar como funciona bien esto, <Button-1> es clic izquierdo.
     # tablero2.bind("<Button-1>", on_board_click_wrapper)
     tablero2.bind("<Button-1>", lambda event: on_board_click_wrapper(event, q1, e1))
     """

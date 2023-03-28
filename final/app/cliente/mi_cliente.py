@@ -17,7 +17,7 @@ def recibir_mensaje(s):
 def argumentos():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, required=False, help="Puerto", default= 5000)
-    parser.add_argument("-d", required=False, help="Direccion IPv4", default= "0.0.0.0")
+    parser.add_argument("-d", required=False, help="Dirección IPv4", default= "0.0.0.0")
     parser.add_argument("-i", type=str, required=False, help="Activar GUI", choices=["y", "n"], default="n")
     
     return parser.parse_args()
@@ -33,7 +33,7 @@ def abrir_socket(args):
         return s
 
     except:
-        print("No se puede establecer conexion, finalizando...")
+        print("No se puede establecer conexión, finalizando...")
         os._exit(0)
 
 
@@ -141,7 +141,7 @@ def jugador1(s):
                     print("+++++++++++ Despues del nuevo mensaje")
                     print_mensaje(respuesta)  
                     continuar_partida = True
-                    break       #! Sale del "for", por lo tanto, se rinicia el bucle (nueva partida).    
+                    break       #! Sale del "for", por lo tanto, se reinicia el bucle (nueva partida).    
 
 
 def jugador2(s):
@@ -172,12 +172,12 @@ def jugador2(s):
                     print("+++++++++++ Despues del nuevo mensaje")
                     print_mensaje(respuesta)  
                     # continuar_partida = True
-                    break       #! Sale del "for", por lo tanto, se rinicia el bucle (nueva partida). 
+                    break       #! Sale del "for", por lo tanto, se reinicia el bucle (nueva partida). 
 
 
 def hacer_ataque(s):
     while True:     #! Bucle por si existe un error del server.
-        enviar(s)   #! Envia las coordenadas ingresadas por el usuario.
+        enviar(s)   #! Envía las coordenadas ingresadas por el usuario.
         
         print("++ ESPERANDO RESPUESTA DEL SERVIDOR de mi ataque")
         respuesta = recibir_mensaje(s)      #! Estado de mi actaque al enemigo
@@ -212,11 +212,11 @@ def main():
 
     s = abrir_socket(args)
     
-    if args.i == "n":       #! Sin interfaz grafica (GUI)
+    if args.i == "n":       #! Sin interfaz gráfica (GUI)
         print("Sin GUI")
         juego(s)
         
-    elif args.i == "y":     #! Con interfaz grafica (GUI)
+    elif args.i == "y":     #! Con interfaz gráfica (GUI)
         gui(s)   
 
     print("[ C Main ] Finalizando...")
@@ -230,8 +230,8 @@ if __name__ == '__main__':
 
 
 #* Info
-# print(tablero.itemcget("#99", "fill"))      #! Devuelve el valor de la configuracion
-# tablero.itemconfig("#99", fill="blue")      #! Cambia la configuracion del elemento
+# print(tablero.itemcget("#99", "fill"))      #! Devuelve el valor de la configuración
+# tablero.itemconfig("#99", fill="blue")      #! Cambia la configuración del elemento
 
 # TODO
 # Ver lo que está en rojo en la funcion "barcos_tableros".
@@ -239,10 +239,10 @@ if __name__ == '__main__':
 # Hacer bien lo de continuar o salir al fin de una partida. Revisar funcion "enviar".
 
 # Como comunicar la funcion "on_board_click" con la de "barcos_tableros" para saber cuando 
-# puedo hacer click y cuando no, por cuestion de turnos.
+# puedo hacer click y cuando no, por cuestión de turnos.
 
-#// El problema de los tag al hacer click seguramente se debe a que el espacio en blaco 
-#// del Dataframe tiene otro tag que el del rectangulo donde este se encuentra.
+#// El problema de los tag al hacer click seguramente se debe a que el espacio en blanco 
+#// del Dataframe tiene otro tag que el del rectángulo donde este se encuentra.
 
 
 
