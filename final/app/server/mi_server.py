@@ -199,8 +199,25 @@ def abrir_socket(args):
 def base_datos():
     pass
 
+#* Hilo de para borrar clientes.
+#? No funciona, al momento de hacer el select.select, este se hace con clientes_objeto vacío, por lo tanto nunca avanza.
+def borrar_cliente_forzado():
 
-#* Hilo de para aceptar.
+    global clientes_objeto  
+
+    while True: 
+        legible, escribible, exceptional = select.select([cliente.s1 for cliente in clientes_objeto] , [], [cliente.s1 for cliente in clientes_objeto] )
+        
+        clientes_copia = clientes_objeto.copy()     #! Esto es porque había problemas al estar recorriendo una lista y a su vez modificandola.
+        for cliente in clientes_copia:      #! Cierra el socket y elimina al cliente de la lista de clientes
+            if cliente.s1 in exceptional:
+                print("/////////// Borrando a ", cliente.nickname)
+                cliente.s1.close()
+                clientes_objeto.remove(cliente)
+
+
+
+#* Hilo de para aceptar clientes.
 def aceptar_cliente(server4, server6):
     print("  Hilo 'Aceptar_cliente' ID:", threading.get_native_id())
     time.sleep(5)
@@ -215,6 +232,7 @@ def aceptar_cliente(server4, server6):
         
         #! Permite esperar que un socket se habilite; en este caso, solo esperamos a que un socket se habilite para 
         #! lectura, es decir, un cliente nos escribe y al server se le habilita la opción de lectura.
+        #! Devuelve los sockets de los clientes.
         legible, escribible, exceptional = select.select(lectura, escritura, excpecion) 
         
         for s in legible:
@@ -224,13 +242,15 @@ def aceptar_cliente(server4, server6):
             elif s == server6:
                 s2,addr = server6.accept()
                 
-            print("---------------------------------------------------------------")
+            print("----------------------------------------------------------------")
             print("  Nuevo cliente {} {}". format(j, addr))
             print("  Proceso padre ID:", os.getpid())
             
             i = len(clientes_objeto)
             nickname = "Jugador" + str(j)
             clientes_objeto.append(C_Cliente(s2, addr, nickname))
+            
+            print("///////////////--------------------------------------------- ", clientes_objeto)
             
             threading.Thread(target=f_cliente, args=(clientes_objeto[i],), name="Cliente {}".format(j)).start()
             j+=1
@@ -415,11 +435,7 @@ def partida(jugadores):
     threading.Thread(target=fin_partida, args=(j1,), name="Fin de partida del jugador 1").start()
     threading.Thread(target=fin_partida, args=(j2,), name="Fin de partida del jugador 2").start()
 
-        
-        
-        
-        
-        
+
 
 #! Fin de la partida por cada jugador.
 #! Anuncia al ganador y preguntar al cliente si desean finalizar la conexión o jugar otra vez.
@@ -555,13 +571,18 @@ def tipo_barco(letra):
 def juego(server4, server6):
     print("  Proceso 'Juego' ID:", os.getpid())
     
-    global clientes_objeto
-    clientes_objeto = []
     
+    #! Hilo para aceptar clientes.
     threading.Thread(target=aceptar_cliente, args=(server4, server6), name="Aceptar cliente").start()
+
+    #! Hilo para borrar clientes forzados a cierre.
+    threading.Thread(target=borrar_cliente_forzado, name="Borrar cliente forzados").start()
+
 
     #! Acá tiene que leer el diccionario y cada 2 en estado de espera crear una partida 
     while True:
+        
+        global clientes_objeto
         jugadores_espera = []
         
         #TODO Seccion critica?? Deberia ser accedido por un hilo a la vez (juego o aceptar_cliente).
@@ -586,13 +607,14 @@ def juego(server4, server6):
 
         else:
             print("++++++++++++++++++++ Esperando jugador nuevo ++++++++++++++++++++")
-            print("  Total de jugadores:", len(clientes_objeto))
+            print("  Total de jugadores:", len(clientes_objeto), "\n  ", [cliente.nickname for cliente in clientes_objeto] )
             print("  Jugadores en espera:", len(jugadores_espera))
             time.sleep(6)
 
 
 def señal(nro_senial, marco):
     print("Finalizando el proceso ID:", os.getpid())
+    #TODO Deberia cerrar todos los sockets.
     os._exit(0)
 
 
@@ -605,15 +627,19 @@ def main():
 
     signal.signal(signal.SIGINT, señal)
 
-    #! Proceso de todas las partidas y clientes
-    p_juego = multiprocessing.Process(target=juego, args=(server4, server6)).start()
+    global clientes_objeto
+    clientes_objeto = []
+   
+    #! Proceso de todas las partidas.
+    p_juego = multiprocessing.Process(target=juego, args=(server4, server6), name="Juego").start()
 
     #! Proceso BD
     # p_bd = multiprocessing.Process(target=base_datos, args=())
     
-    # ...
-    #! Proceso main del servidor 
-    # ...
+    time.sleep(11)
+    print("//--------------------------------------------- ", clientes_objeto)
+    
+    
     
     
 if __name__ == '__main__':
@@ -621,11 +647,7 @@ if __name__ == '__main__':
 
 
 #TODO: En orden de prioridades.
-#* Arreglar del lado del cliente que cuando empieza una nueva partida, despues de haber jugado una, 
-#* el cliente deberia volver a ver si es el jugador 1 o el 2. Pero eso no lo hace. Esto se arregla
-#* en las funciones jugador1(s) y jugador2(s) modificando el "while continuar_partida". Posiblemente si hago 
-#* que las funciones jugador1 y 2 devuelvan un booleano y eliminar el bucle de talvez "while continuar_partida" y 
-#* poniéndolo en la funcion "juego(S)" se arregla. 
+#* Al momento de iniciar una nueva partida, todo funciona joya pero el cliente se queda en "ESPERANDO RESPUESTA DEL SERVIDOR de mi ataque".
 
 #// Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi)
 
@@ -641,15 +663,19 @@ if __name__ == '__main__':
 
 #// Cambiar el diccionario cliente por una clase cliente.
 
+# Porque si creo el hilo aceptar clientes en el main no funciona??
+
 # Cambiar la variable global clientes por una variable compartida entre hilos del mismo proceso.
 
 # Separar los barcos un lugar a los costados, no se pueden estar tocando.
 
-# Ver si se puede con IPv4 y v6.
+#// Ver si se puede con IPv4 y v6.
 
 # Usar MongoBD.
 
 # Cada usuario pueda poner su nickname personalizado.
+
+# Usar "curses" para mostrar mejor el texto en terminal. Es lo que me recomendó el luisma.
 
 # El click del GUI quedó a medio camino.
 

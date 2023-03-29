@@ -100,8 +100,8 @@ def print_mensaje(mensaje):
     print("\n-----Mis disparos: \n", mensaje[2]["disparos_enemigos"])
     print("\n++++++++++++++++++++++++++++++++++++++++++++ PRINT ++++++++++++++++++++++++++++++++++++++++++++\n")
 
-
-def fin_partida(s):
+#! Si el usuario quiere buscar otra partida o terminar y cerrar el juego.
+def seguir_jugando(s):
     
     while True:
         msg1 = input("[ Cliente {} ] Continuar o salir: ".format(hora_actual())).lower()
@@ -111,14 +111,14 @@ def fin_partida(s):
             enviar_mensaje(s, msg1)
             mensaje = recibir_mensaje(s)        
             print("[ S ]", mensaje)
-            return False
+            return True
         
         elif msg1 == "salir":
             print("[ C ] Entraste en salir")
             enviar_mensaje(s, msg1)
             # mensaje = recibir_mensaje(s)        
             # print("[ S ]", mensaje)
-            return True
+            return False
         
         else: 
             print("[ C ] Escribí bien bro...", msg1)
@@ -126,26 +126,38 @@ def fin_partida(s):
 
 
 def juego(s):
-    print("///////////// Nueva partida")
-    mensaje = recibir_mensaje(s)        
-    print_mensaje(mensaje)
+    nueva_partida = True
     
-    if mensaje[3][0] == False:  #! Error en el server.
-        print("[ C {} ] ERROR EN EL SERVER ANTES DE SABER QUE JUGADOR SOS. {}".format(hora_actual(), mensaje[3]))
-    
-    elif mensaje[3][1] == "1":    
-        jugador1(s)
-
-    elif mensaje[3][1] == "2":  
-        jugador2(s)
+    while nueva_partida: 
         
-    else:
-        print("[ C {} ] ERROR INESPERADO EN EL SERVER.".format(hora_actual()))
+        print("///////////// Nueva partida")
+        mensaje = recibir_mensaje(s)        
+        print_mensaje(mensaje)
+        
+        if mensaje[3][0] == False:  #! Error en el server.
+            print("[ C {} ] ERROR EN EL SERVER ANTES DE SABER QUE JUGADOR SOS. {}".format(hora_actual(), mensaje[3]))
+            break
+        
+        elif mensaje[3][1] == "1":    
+            nueva_partida = jugador1(s)
+
+        elif mensaje[3][1] == "2":  
+            nueva_partida = jugador2(s)
+            
+        else:
+            print("[ C {} ] ERROR INESPERADO EN EL SERVER.".format(hora_actual()))
+            break
+    
+    print("Finalizando ...")
+    os._exit(0)
 
 
+
+#TODO Se puede borrar un jugador y hacer uno generico pasandole los paramentros [1,2] o [2,1]
 def jugador1(s):
     
     continuar_partida = True
+    nueva_partida = False
     
     while continuar_partida:
         
@@ -158,25 +170,17 @@ def jugador1(s):
             
             if respuesta[3][1] == "FIN":
                 print("[ C ] FIN DE LA PARTIDA.")
-                
-                continuar_partida = not(fin_partida)
-                
-                if fin_partida(s):
-                    continuar_partida = False       #! Sale del bucle, terminó la partida.
-                    break       #! Sale del "for2 para poder terminar con el bucle.
-                
-                else:
-                    print("+++++++++++ Antes del nuevo mensaje")
-                    respuesta = recibir_mensaje(s)      #! Acá se queda esperando los tableros de la nueva partida.
-                    print("+++++++++++ Despues del nuevo mensaje")
-                    print_mensaje(respuesta)  
-                    continuar_partida = True
-                    break       #! Sale del "for", por lo tanto, se reinicia el bucle (nueva partida).    
 
+                nueva_partida = seguir_jugando(s)       #! Buscar una nueva partida o no.
+                continuar_partida = False               #! Terminar partida actual.
+                break                                   #! Terminar turno actual. Sale del "for", por lo tanto, se reinicia el bucle. 
+                
+    return nueva_partida
 
 def jugador2(s):
         
     continuar_partida = True
+    nueva_partida = False
     
     while continuar_partida:
         
@@ -189,20 +193,12 @@ def jugador2(s):
             
             if respuesta[3][1] == "FIN":
                 print("[ C ] FIN DE LA PARTIDA.")
+                    
+                nueva_partida = seguir_jugando(s)       #! Buscar una nueva partida o no.
+                continuar_partida = False               #! Terminar partida actual.
+                break                                   #! Terminar turno actual. Sale del "for", por lo tanto, se reinicia el bucle. 
                 
-                continuar_partida = not(fin_partida)
-                
-                if fin_partida(s):
-                    continuar_partida = False       #! Sale del bucle, terminó la partida.
-                    break       #! Sale del "for" para poder terminar con el bucle.
-                
-                else:
-                    print("+++++++++++ Antes del nuevo mensaje")
-                    respuesta = recibir_mensaje(s)      #! Acá se queda esperando los tableros de la nueva partida.
-                    print("+++++++++++ Despues del nuevo mensaje")
-                    print_mensaje(respuesta)  
-                    # continuar_partida = True
-                    break       #! Sale del "for", por lo tanto, se reinicia el bucle (nueva partida). 
+    return nueva_partida
 
 
 def hacer_ataque(s):
