@@ -1,4 +1,4 @@
-import socket, threading, os, multiprocessing, argparse, queue, time, signal, random, pickle, re
+import socket, threading, os, multiprocessing, argparse, queue, time, signal, random, pickle, re, select
 import pandas as pd
 from cliente import C_Cliente
 
@@ -169,16 +169,30 @@ def argumentos():
 
 
 def abrir_socket(args):
-    host = "0.0.0.0"
     port = args.p
+    ipv4 = (socket.getaddrinfo("localhost", args.p, socket.AF_INET, 1)[0][4][0])
+    ipv6 = (socket.getaddrinfo("localhost", args.p, socket.AF_INET6, 1)[0][4][0])
+    print("Main PID:", os.getpid())
+    
+    try:     
+        s4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s4.bind((ipv4, port))
+        s4.listen()
+        print("Server 'ON' IPv4 <" + ipv4 + ": " + str(port) + ">")
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((host, port))
+    except Exception as e:
+        print("/////////////////////////////// NO SE PUEDE INICIAR EL SERVER con IPv4")
+    
+    try:     
+        s6 = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        s6.bind((ipv6, port))
+        s6.listen()
+        print("Server 'ON' IPv6 <" + ipv6 + ": " + str(port) + ">")
+        
+    except Exception as e:
+        print("/////////////////////////////// NO SE PUEDE INICIAR EL SERVER con IPv4")
 
-    print("Padre ID:", os.getpid())
-    print("Server 'ON' <" + host + ": " + str(port) + ">")
-    s.listen()
-    return s
+    return s4, s6
 
 
 #TODO Conexión con la BD
@@ -187,23 +201,39 @@ def base_datos():
 
 
 #* Hilo de para aceptar.
-def aceptar_cliente(server):
+def aceptar_cliente(server4, server6):
     print("  Hilo 'Aceptar_cliente' ID:", threading.get_native_id())
-    
+    time.sleep(5)
     j=1
+    global clientes_objeto
+    
+    lectura = [server4, server6]
+    escritura = []
+    excpecion = []
+    
     while True:
-        s2,addr = server.accept()
-        print("-------------------------------------")
-        print("  Nuevo cliente {} {}". format(j, addr))
-        print("  Proceso padre ID:", os.getpid())
         
-        global clientes_objeto
-        i = len(clientes_objeto)
-        nickname = "Jugador" + str(j)
-        clientes_objeto.append(C_Cliente(s2, addr, nickname))
+        #! Permite esperar que un socket se habilite; en este caso, solo esperamos a que un socket se habilite para 
+        #! lectura, es decir, un cliente nos escribe y al server se le habilita la opción de lectura.
+        legible, escribible, exceptional = select.select(lectura, escritura, excpecion) 
         
-        threading.Thread(target=f_cliente, args=(clientes_objeto[i],), name="Cliente {}".format(j)).start()
-        j+=1
+        for s in legible:
+            if s == server4:
+                s2,addr = server4.accept()
+                
+            elif s == server6:
+                s2,addr = server6.accept()
+                
+            print("---------------------------------------------------------------")
+            print("  Nuevo cliente {} {}". format(j, addr))
+            print("  Proceso padre ID:", os.getpid())
+            
+            i = len(clientes_objeto)
+            nickname = "Jugador" + str(j)
+            clientes_objeto.append(C_Cliente(s2, addr, nickname))
+            
+            threading.Thread(target=f_cliente, args=(clientes_objeto[i],), name="Cliente {}".format(j)).start()
+            j+=1
 
 
 def matriz_inicial():
@@ -522,13 +552,13 @@ def tipo_barco(letra):
 
 #* Proceso juego.  
 #! Se crean las instancias de los clientes.
-def juego(server):
+def juego(server4, server6):
     print("  Proceso 'Juego' ID:", os.getpid())
     
     global clientes_objeto
     clientes_objeto = []
     
-    threading.Thread(target=aceptar_cliente, args=(server,), name="Aceptar cliente").start()
+    threading.Thread(target=aceptar_cliente, args=(server4, server6), name="Aceptar cliente").start()
 
     #! Acá tiene que leer el diccionario y cada 2 en estado de espera crear una partida 
     while True:
@@ -568,7 +598,7 @@ def señal(nro_senial, marco):
 
 def main():
     ar = argumentos()
-    server = abrir_socket(ar)
+    server4, server6 = abrir_socket(ar)
     
     pid_padre = os.getpid()
     print("  Proceso main ID:", pid_padre)
@@ -576,7 +606,7 @@ def main():
     signal.signal(signal.SIGINT, señal)
 
     #! Proceso de todas las partidas y clientes
-    p_juego = multiprocessing.Process(target=juego, args=(server,)).start()
+    p_juego = multiprocessing.Process(target=juego, args=(server4, server6)).start()
 
     #! Proceso BD
     # p_bd = multiprocessing.Process(target=base_datos, args=())

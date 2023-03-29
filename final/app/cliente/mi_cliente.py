@@ -1,8 +1,23 @@
+import ipaddress
 import socket, argparse, os, datetime, pickle, re
 from mi_gui import gui
 
 def hora_actual():
     return datetime.datetime.now().strftime("%H:%M:%S")
+
+
+def detectar_tipo_ip(ip):
+    try:
+        ip = ipaddress.ip_address(ip)   #! Convierte la ip en un objeto de ipaddress.
+        if isinstance(ip, ipaddress.IPv4Address):   #! Verifica si el objeto ip es una instancia de la clase ipv4address 
+            return "IPv4"
+        elif isinstance(ip, ipaddress.IPv6Address):     #! Verifica si el objeto ip es una instancia de la clase ipv6address
+            return "IPv6"
+        else:
+            return False
+    except ValueError:
+        return False
+
 
 #! Solo la casilla (Ej: B1, J9)
 def enviar_mensaje(s, m):
@@ -17,24 +32,39 @@ def recibir_mensaje(s):
 def argumentos():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, required=False, help="Puerto", default= 5000)
-    parser.add_argument("-d", required=False, help="Dirección IPv4", default= "0.0.0.0")
+    parser.add_argument("-d", required=False, help="Dirección IPv4 o  IPv6", default= "0.0.0.0")
     parser.add_argument("-i", type=str, required=False, help="Activar GUI", choices=["y", "n"], default="n")
-    
+
     return parser.parse_args()
 
 
 def abrir_socket(args):
+    
     host = args.d
     port = args.p
+    
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print("Server:", host + ":" + str(port))
-        s.connect((host, port))
-        return s
+        if detectar_tipo_ip(host) == "IPv4":
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((host, port))
+            return s
+
+        
+        elif detectar_tipo_ip(host) == "IPv6":
+            s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            s.connect((host, port))
+            return s
+
+        else:
+            print("Dirección ingresada no valida como IPv4 o IPv6")
+            os._exit(0)
 
     except:
         print("No se puede establecer conexión, finalizando...")
         os._exit(0)
+
+
 
 
 def borrarPantalla():
