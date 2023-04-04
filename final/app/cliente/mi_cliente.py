@@ -33,7 +33,7 @@ def argumentos():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, required=False, help="Puerto", default= 5000)
     parser.add_argument("-d", required=False, help="Dirección IPv4 o  IPv6", default= "0.0.0.0")
-    parser.add_argument("-i", type=str, required=False, help="Activar GUI", choices=["y", "n"], default="n")
+    parser.add_argument("-n", type=str, required=False, help="Nickname", default= "Jugador")
 
     return parser.parse_args()
 
@@ -48,12 +48,14 @@ def abrir_socket(args):
         if detectar_tipo_ip(host) == "IPv4":
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect((host, port))
+            enviar_mensaje(s, args.n)
             return s
 
         
         elif detectar_tipo_ip(host) == "IPv6":
             s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
             s.connect((host, port))
+            enviar_mensaje(s, args.n)
             return s
 
         else:
@@ -65,27 +67,17 @@ def abrir_socket(args):
         os._exit(0)
 
 
-
-
-def borrarPantalla():
-    if os.name == "posix":
-        os.system ("clear")
-
-    elif os.name == "ce" or os.name == "nt" or os.name == "dos":
-        os.system ("cls")
-
-
 def enviar(s):
     er = r'[A-J][0-9]$'   #! Expresion regular para las coordenadas.
 
     while True:
-        msg1 = input("[ Cliente {} ] Coordenadas: ".format(hora_actual())).upper()
+        msg1 = input(f"[ C {hora_actual()} ] Coordenadas: ").upper()
         
         if re.match(er, msg1):        #! Coordenada correcta
             break
         
         else:
-            print("[ Cliente {} ] Coordenada inválida.".format(hora_actual()))
+            print(f"[ C {hora_actual()} ] Coordenada inválida.")
     
 
     enviar_mensaje(s, msg1)
@@ -94,7 +86,7 @@ def enviar(s):
 def print_mensaje(mensaje):
 #! [msg1, tablero1, tablero2, estado]
     print("\n++++++++++++++++++++++++++++++++++++++++++++ PRINT ++++++++++++++++++++++++++++++++++++++++++++\n")
-    print("[ Server {} ]\n   Mensaje: {}\n   Estado: {}".format(hora_actual() , mensaje[0], mensaje[3]))    #!Mensaje al jugador
+    print(f"[ S {hora_actual()} ]\n   Mensaje: {mensaje[0]}\n   Estado: {mensaje[3]}")       #!Mensaje al jugador
     print("\n-----Mis barcos: \n", mensaje[1]["mis_barcos"])
     print("\n-----Disparos enemigos: \n", mensaje[1]["disparos_enemigos"])
     print("\n-----Mis disparos: \n", mensaje[2]["disparos_enemigos"])
@@ -104,25 +96,22 @@ def print_mensaje(mensaje):
 def seguir_jugando(s):
     
     while True:
-        msg1 = input("[ Cliente {} ] Continuar o salir: ".format(hora_actual())).lower()
+        msg1 = input(f"[ C {hora_actual()} ] Continuar o salir: ").lower()
         
         if msg1 == "continuar":
-            print("[ C ] Entraste en continuar")
+            print(f"[ C  {hora_actual()} ] Entraste en continuar")
             enviar_mensaje(s, msg1)
             mensaje = recibir_mensaje(s)        
-            print("[ S ]", mensaje)
+            print(f"[ S {hora_actual()} ] {mensaje}")
             return True
         
         elif msg1 == "salir":
-            print("[ C ] Entraste en salir")
+            print(f"[ C  {hora_actual()} ] Entraste en salir")
             enviar_mensaje(s, msg1)
-            # mensaje = recibir_mensaje(s)        
-            # print("[ S ]", mensaje)
             return False
         
         else: 
-            print("[ C ] Escribí bien bro...", msg1)
-
+            print(f"[ C  {hora_actual()} ] Escribí bien bro...", msg1)
 
 
 def juego(s):
@@ -130,38 +119,36 @@ def juego(s):
     
     while nueva_partida: 
         
-        print("///////////// Nueva partida")
         mensaje = recibir_mensaje(s)        
         print_mensaje(mensaje)
         
         if mensaje[3][0] == False:  #! Error en el server.
-            print("[ C {} ] ERROR EN EL SERVER ANTES DE SABER QUE JUGADOR SOS. {}".format(hora_actual(), mensaje[3]))
+            print(f"[ C {hora_actual()} ] ERROR EN EL SERVER ANTES DE SABER QUE JUGADOR SOS. {mensaje[3]}")
             break
         
         elif mensaje[3][1] == "1":    
-            nueva_partida = jugador1(s)
+            
+            nueva_partida = jugador(s, [1,2])
 
         elif mensaje[3][1] == "2":  
-            nueva_partida = jugador2(s)
+            nueva_partida = jugador(s, [2,1])
             
         else:
-            print("[ C {} ] ERROR INESPERADO EN EL SERVER.".format(hora_actual()))
+            print(f"[ C {hora_actual()} ] ERROR INESPERADO EN EL SERVER.")
             break
     
     print("Finalizando ...")
     os._exit(0)
 
 
-
-#TODO Se puede borrar un jugador y hacer uno generico pasandole los paramentros [1,2] o [2,1]
-def jugador1(s):
+def jugador(s, orden):
     
     continuar_partida = True
     nueva_partida = False
     
     while continuar_partida:
         
-        for turno in [1,2]:     #! Turno del Jugador 1 y luego del Jugador 2.
+        for turno in orden:     #! Turno del Jugador 1 y luego del Jugador 2.
             if turno == 1:
                 respuesta = hacer_ataque(s)
             
@@ -169,31 +156,8 @@ def jugador1(s):
                 respuesta = recibir_ataque(s)
             
             if respuesta[3][1] == "FIN":
-                print("[ C ] FIN DE LA PARTIDA.")
+                print(f"[ C  {hora_actual()} ] FIN DE LA PARTIDA.")
 
-                nueva_partida = seguir_jugando(s)       #! Buscar una nueva partida o no.
-                continuar_partida = False               #! Terminar partida actual.
-                break                                   #! Terminar turno actual. Sale del "for", por lo tanto, se reinicia el bucle. 
-                
-    return nueva_partida
-
-def jugador2(s):
-        
-    continuar_partida = True
-    nueva_partida = False
-    
-    while continuar_partida:
-        
-        for turno in [2,1]:     #! Turno del Jugador 2 y luego del Jugador 1.
-            if turno == 1:
-                respuesta = hacer_ataque(s)
-            
-            elif turno == 2:
-                respuesta = recibir_ataque(s)
-            
-            if respuesta[3][1] == "FIN":
-                print("[ C ] FIN DE LA PARTIDA.")
-                    
                 nueva_partida = seguir_jugando(s)       #! Buscar una nueva partida o no.
                 continuar_partida = False               #! Terminar partida actual.
                 break                                   #! Terminar turno actual. Sale del "for", por lo tanto, se reinicia el bucle. 
@@ -238,37 +202,12 @@ def main():
 
     s = abrir_socket(args)
     
-    if args.i == "n":       #! Sin interfaz gráfica (GUI)
-        print("Sin GUI")
-        juego(s)
-        
-    elif args.i == "y":     #! Con interfaz gráfica (GUI)
-        gui(s)   
+    juego(s)
 
-    print("[ C Main ] Finalizando...")
+    print(f"[ C Main {hora_actual()} ] Finalizando...")
     s.close()
-    # os._exit()
+    os._exit(0)
 
 
 if __name__ == '__main__':
     main()
-
-
-
-#* Info
-# print(tablero.itemcget("#99", "fill"))      #! Devuelve el valor de la configuración
-# tablero.itemconfig("#99", fill="blue")      #! Cambia la configuración del elemento
-
-# TODO
-# Ver lo que está en rojo en la funcion "barcos_tableros".
-
-# Hacer bien lo de continuar o salir al fin de una partida. Revisar funcion "enviar".
-
-# Como comunicar la funcion "on_board_click" con la de "barcos_tableros" para saber cuando 
-# puedo hacer click y cuando no, por cuestión de turnos.
-
-#// El problema de los tag al hacer click seguramente se debe a que el espacio en blanco 
-#// del Dataframe tiene otro tag que el del rectángulo donde este se encuentra.
-
-
-

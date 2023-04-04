@@ -23,10 +23,9 @@ en simultaneo. Cada hilo partida se comunica y sincroniza con cada hilo de los 2
 a traves de Queue, Event y Barrier. El resultado de cada partida será guardado en una 
 base de datos.
 
-El usuario, antes de iniciar la app, decide si desea utilizar la terminal o un entorno 
-gráfico (Tkinter) a traves de un argumento pasado al momento de iniciar la app. Una ves iniciada, 
-espera a que el servidor lo empareje con otro jugador, luego recibe la posición de 
-sus barcos de forma aleatoria de parte del servidor para empezar a jugar a "Batalla Naval". 
+El usuario una ves inicia la partida espera a que el servidor lo empareje con otro 
+jugador, luego recibe la posición de sus barcos de forma aleatoria de parte del servidor 
+para empezar a jugar a "Batalla Naval". 
 
 La implementación del juego se puede resumir en los siguientes pasos:
     > Inicio del server, creación del proceso juego y para la base de datos.
@@ -37,9 +36,3 @@ La implementación del juego se puede resumir en los siguientes pasos:
     > Evaluar cada disparo en el lado del servidor (funcion "jugada"). 
     > Finalizar el juego cuando uno de los jugadores hunde todos los barcos del oponente.
     > Guardar el resultado en la BD.
-
-
-Falta aclarar/definir:
-    > Secciones criticas
-    > Uso de asincronismo de I/O (AsyncIO)
-    > Uso de cola de tareas distribuidas (Celery???)

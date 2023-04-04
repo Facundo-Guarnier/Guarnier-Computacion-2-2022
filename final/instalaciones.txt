@@ -1,0 +1,12 @@
+apt-get install python3-tk 
+pip3 install pandas
+pip3 install pickle5
+
+pip3 install pymongo
+pip3 install motor
+
+
+mongo: 
+    Instalacion: https://learn.microsoft.com/en-us/windows/wsl/tutorials/wsl-database
+    Iniciar mongoDB: sudo mongod --dbpath ~/data/db
+    Iniciar mongo: mongosh

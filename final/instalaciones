@@ -1,3 +1,0 @@
-apt-get install python3-tk 
-pip3 install pandas
-pip3 install pickle5

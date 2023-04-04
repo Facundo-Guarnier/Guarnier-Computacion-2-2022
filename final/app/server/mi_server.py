@@ -1,6 +1,8 @@
-import socket, threading, os, multiprocessing, argparse, queue, time, signal, random, pickle, re, select
+import socket, threading, os, multiprocessing, argparse, queue, time, signal, random, pickle, re, select, pymongo, celery
 import pandas as pd
 from cliente import C_Cliente
+# from celery_task import write_to_mongo, read_from_mongo
+from celery_task import *
 
 # https://stackoverflow.com/questions/3991104/very-large-input-and-piping-using-subprocess-popen
 
@@ -195,10 +197,6 @@ def abrir_socket(args):
     return s4, s6
 
 
-#TODO Conexión con la BD
-def base_datos():
-    pass
-
 #* Hilo de para borrar clientes.
 #? No funciona, al momento de hacer el select.select, este se hace con clientes_objeto vacío, por lo tanto nunca avanza.
 def borrar_cliente_forzado():
@@ -211,23 +209,20 @@ def borrar_cliente_forzado():
         clientes_copia = clientes_objeto.copy()     #! Esto es porque había problemas al estar recorriendo una lista y a su vez modificandola.
         for cliente in clientes_copia:      #! Cierra el socket y elimina al cliente de la lista de clientes
             if cliente.s1 in exceptional:
-                print("/////////// Borrando a ", cliente.nickname)
                 cliente.s1.close()
                 clientes_objeto.remove(cliente)
 
 
-
 #* Hilo de para aceptar clientes.
-def aceptar_cliente(server4, server6):
+def aceptar_cliente(server4, server6, p):
     print("  Hilo 'Aceptar_cliente' ID:", threading.get_native_id())
-    time.sleep(5)
-    j=1
-    global clientes_objeto
     
+    global clientes_objeto
     lectura = [server4, server6]
     escritura = []
     excpecion = []
     
+    j=1
     while True:
         
         #! Permite esperar que un socket se habilite; en este caso, solo esperamos a que un socket se habilite para 
@@ -242,17 +237,17 @@ def aceptar_cliente(server4, server6):
             elif s == server6:
                 s2,addr = server6.accept()
                 
+            nickname = recibir_mensaje(s2)
             print("----------------------------------------------------------------")
-            print("  Nuevo cliente {} {}". format(j, addr))
-            print("  Proceso padre ID:", os.getpid())
+            print(f"  Nuevo cliente {j} {addr} : {nickname}")
             
+            #TODO Seccion critica??
             i = len(clientes_objeto)
-            nickname = "Jugador" + str(j)
             clientes_objeto.append(C_Cliente(s2, addr, nickname))
-            
-            print("///////////////--------------------------------------------- ", clientes_objeto)
-            
             threading.Thread(target=f_cliente, args=(clientes_objeto[i],), name="Cliente {}".format(j)).start()
+            
+            # p.send(["jugador", nickname])       #! Envía a la BD el nickname, si no existe lo agrega. 
+            
             j+=1
 
 
@@ -374,7 +369,7 @@ def turno(q_j, e_j, pe_j, tablero1, tablero2):
     e_j.set()       #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
     
     return msg2, tablero1, tablero2, estado
-    
+
 
 #* Un hilo para cada partida (cada 2 jugadores).
 def partida(jugadores):
@@ -436,7 +431,6 @@ def partida(jugadores):
     threading.Thread(target=fin_partida, args=(j2,), name="Fin de partida del jugador 2").start()
 
 
-
 #! Fin de la partida por cada jugador.
 #! Anuncia al ganador y preguntar al cliente si desean finalizar la conexión o jugar otra vez.
 #! Al cliente le llegará un mensaje por el método recv() con longitud cero. Cuando esto  
@@ -470,7 +464,6 @@ def fin_partida(jugador):
             if cliente.nickname == jugador.nickname:
                 print(jugador.nickname, "Entraste en borrar jugador.")
                 clientes_objeto.remove(cliente)
-
 
 
 #! Procesamiento del disparo
@@ -568,12 +561,11 @@ def tipo_barco(letra):
 
 #* Proceso juego.  
 #! Se crean las instancias de los clientes.
-def juego(server4, server6):
+def juego(server4, server6, p):
     print("  Proceso 'Juego' ID:", os.getpid())
     
-    
     #! Hilo para aceptar clientes.
-    threading.Thread(target=aceptar_cliente, args=(server4, server6), name="Aceptar cliente").start()
+    threading.Thread(target=aceptar_cliente, args=(server4, server6, p), name="Aceptar cliente").start()
 
     #! Hilo para borrar clientes forzados a cierre.
     threading.Thread(target=borrar_cliente_forzado, name="Borrar cliente forzados").start()
@@ -614,8 +606,39 @@ def juego(server4, server6):
 
 def señal(nro_senial, marco):
     print("Finalizando el proceso ID:", os.getpid())
-    #TODO Deberia cerrar todos los sockets.
+    
+    global clientes_objeto
+    
+    for cliente in clientes_objeto:
+        try:
+            cliente.s1.close()
+        except:
+            pass
+    
     os._exit(0)
+
+
+#TODO Conexión con la BD
+def base_datos(p):
+    client = pymongo.MongoClient('mongodb://localhost:27017/')
+    db = client.mydatabase
+    coleccion = db.jugadores
+    
+    
+    #* Bucle esperando recibir algo por pipe, depende lo que sea hace un read o un write en mongo y
+    #* y devuelve por pipe el resultado en el caso de ser un read.
+    while True:
+        msg1 = p.recv()
+        
+        if msg1[0] == "read":
+            pass
+        
+        elif msg1[0] == "write":
+            pass
+        
+        elif msg1[0] == "jugador":
+            existe_jugador(coleccion)
+
 
 
 def main():
@@ -629,17 +652,20 @@ def main():
 
     global clientes_objeto
     clientes_objeto = []
-   
+
+    p1, p2 = multiprocessing.Pipe()
+
     #! Proceso de todas las partidas.
-    p_juego = multiprocessing.Process(target=juego, args=(server4, server6), name="Juego").start()
+    p_juego = multiprocessing.Process(target=juego, args=(server4, server6, p1), name="Juego").start()
 
     #! Proceso BD
-    # p_bd = multiprocessing.Process(target=base_datos, args=())
-    
-    time.sleep(11)
-    print("//--------------------------------------------- ", clientes_objeto)
+    # p_bd = multiprocessing.Process(target=base_datos, args=(p2, )).start()
     
     
+    
+
+    # threading.Lock()
+    # multiprocessing.Lock()
     
     
 if __name__ == '__main__':
@@ -647,7 +673,20 @@ if __name__ == '__main__':
 
 
 #TODO: En orden de prioridades.
-#* Al momento de iniciar una nueva partida, todo funciona joya pero el cliente se queda en "ESPERANDO RESPUESTA DEL SERVIDOR de mi ataque".
+# Usar locks para las variables globales, si o si.
+# Usar MongoBD con celery y en un proceso aparte comunicado por pipe.
+
+# Ver lo que falta en el archivo funcionalidad_entidad.txt
+
+# Separar los barcos un lugar a los costados, no se pueden estar tocando.
+
+#// Cada usuario pueda poner su nickname personalizado.
+
+# Usar "curses" para mostrar mejor el texto en terminal. Es lo que me recomendó el luisma.
+
+# ¿Como borrar un cliente que se desconectó con "ctrl + c"?
+
+# Investigar threading.RLock(), threading.BoundedSemaphore(), threading.Condition().
 
 #// Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi)
 
@@ -663,26 +702,6 @@ if __name__ == '__main__':
 
 #// Cambiar el diccionario cliente por una clase cliente.
 
-# Porque si creo el hilo aceptar clientes en el main no funciona??
-
-# Cambiar la variable global clientes por una variable compartida entre hilos del mismo proceso.
-
-# Separar los barcos un lugar a los costados, no se pueden estar tocando.
-
 #// Ver si se puede con IPv4 y v6.
-
-# Usar MongoBD.
-
-# Cada usuario pueda poner su nickname personalizado.
-
-# Usar "curses" para mostrar mejor el texto en terminal. Es lo que me recomendó el luisma.
-
-# El click del GUI quedó a medio camino.
-
-# ¿Como borrar un cliente que se desconectó con "ctrl + c"?
-
-# Poner una seccion critica a las variables globales
-
-# Investigar threading.RLock(), threading.BoundedSemaphore(), threading.Condition().
 
 #//  Ver como matar al proceso "online" cuando muere el main. Señal de ctrl + c para que también se la envíe al hijo. 

@@ -9,8 +9,8 @@ El Server es el encargado de:
     > El hilo partida crea los tableros con los barcos, gestiona cada 
       disparo (Agua, Tocado, Hundido), determina el fin de la partida y 
       envía el estado de los tableros y de cada disparo a los clientes.
-    > Un procesos (o alguna alternativa) es el encargado de almacenar 
-      los resultados de la partida en la BD utilizando AsyncIO. (Falta)
+    > Un procesos es el encargado de almacenar los resultados de la 
+      partida en MongoDb utilizando Celery.
 
 El servidor recibe por parámetro: 
 	> IP
@@ -28,7 +28,7 @@ El cliente realiza lo siguiente:
 El cliente recibe por parámetro:
 	> IP del server
 	> Puerto del server
-	> Nickname (Falta)
+	> Nickname
 
 Cada cliente se le es asignado, por el lado del servidor:
     > Socket (s2)
