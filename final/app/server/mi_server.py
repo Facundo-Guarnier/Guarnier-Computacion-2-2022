@@ -206,12 +206,15 @@ def borrar_cliente_forzado():
     while True: 
         legible, escribible, exceptional = select.select([cliente.s1 for cliente in clientes_objeto] , [], [cliente.s1 for cliente in clientes_objeto] )
         
+        global lock
+        lock.acquire()
+        
         clientes_copia = clientes_objeto.copy()     #! Esto es porque había problemas al estar recorriendo una lista y a su vez modificandola.
         for cliente in clientes_copia:      #! Cierra el socket y elimina al cliente de la lista de clientes
             if cliente.s1 in exceptional:
                 cliente.s1.close()
                 clientes_objeto.remove(cliente)
-
+        lock.release()
 
 #* Hilo de para aceptar clientes.
 def aceptar_cliente(server4, server6, p):
@@ -241,10 +244,12 @@ def aceptar_cliente(server4, server6, p):
             print("----------------------------------------------------------------")
             print(f"  Nuevo cliente {j} {addr} : {nickname}")
             
-            #TODO Seccion critica??
+            global lock
+            lock.acquire()
             i = len(clientes_objeto)
             clientes_objeto.append(C_Cliente(s2, addr, nickname))
             threading.Thread(target=f_cliente, args=(clientes_objeto[i],), name="Cliente {}".format(j)).start()
+            lock.release()
             
             # p.send(["jugador", nickname])       #! Envía a la BD el nickname, si no existe lo agrega. 
             
@@ -459,11 +464,15 @@ def fin_partida(jugador):
         jugador.e1.set()        #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
         jugador.s1.close()
         
+        
+        global lock
+        lock.acquire()
         #! Busca y elimina al jugador de la lista de jugadores.
         for cliente in clientes_objeto:
             if cliente.nickname == jugador.nickname:
                 print(jugador.nickname, "Entraste en borrar jugador.")
                 clientes_objeto.remove(cliente)
+        lock.release()
 
 
 #! Procesamiento del disparo
@@ -577,7 +586,10 @@ def juego(server4, server6, p):
         global clientes_objeto
         jugadores_espera = []
         
-        #TODO Seccion critica?? Deberia ser accedido por un hilo a la vez (juego o aceptar_cliente).
+        time.sleep(6)
+        
+        global lock
+        lock.acquire()
         for cliente in clientes_objeto:
             if cliente.espera:
                 jugadores_espera.append(cliente)
@@ -601,19 +613,21 @@ def juego(server4, server6, p):
             print("++++++++++++++++++++ Esperando jugador nuevo ++++++++++++++++++++")
             print("  Total de jugadores:", len(clientes_objeto), "\n  ", [cliente.nickname for cliente in clientes_objeto] )
             print("  Jugadores en espera:", len(jugadores_espera))
-            time.sleep(6)
+        lock.release()
 
 
 def señal(nro_senial, marco):
     print("Finalizando el proceso ID:", os.getpid())
-    
     global clientes_objeto
     
+    global lock
+    lock.acquire()
     for cliente in clientes_objeto:
         try:
             cliente.s1.close()
         except:
             pass
+    lock.release()
     
     os._exit(0)
 
@@ -650,8 +664,13 @@ def main():
 
     signal.signal(signal.SIGINT, señal)
 
+    global lock
+    lock = threading.Lock()
+
+    lock.acquire()      #! Bloquea el candado.
     global clientes_objeto
     clientes_objeto = []
+    lock.release()      #! Libera el candado.
 
     p1, p2 = multiprocessing.Pipe()
 
@@ -673,7 +692,8 @@ if __name__ == '__main__':
 
 
 #TODO: En orden de prioridades.
-# Usar locks para las variables globales, si o si.
+#// Usar locks para las variables globales, si o si.
+
 # Usar MongoBD con celery y en un proceso aparte comunicado por pipe.
 
 # Ver lo que falta en el archivo funcionalidad_entidad.txt
