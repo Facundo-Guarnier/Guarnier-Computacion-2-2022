@@ -5,8 +5,18 @@ pip3 install pickle5
 pip3 install pymongo
 pip3 install motor
 
+pip install redis
 
-mongo: 
+
+Mongo: 
     Instalacion: https://learn.microsoft.com/en-us/windows/wsl/tutorials/wsl-database
     Iniciar mongoDB: sudo mongod --dbpath ~/data/db
     Iniciar mongo: mongosh
+
+
+Iniciar app: 
+    1 - Iniciar dokcer
+    2 - Iniciar redis: $ docker run --rm -p 6379:6379 redis
+    3 - iniciar celery en la carpeta app/server: $  celery -A celery_task worker --loglevel=INFO -c4
+    4 - Iniciar mongod: $ sudo mongod --dbpath ~/data/db
+    5 - Iniciar mi_Server.py

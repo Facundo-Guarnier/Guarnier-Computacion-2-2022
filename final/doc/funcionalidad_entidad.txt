@@ -13,10 +13,8 @@ El Server es el encargado de:
       partida en MongoDb utilizando Celery.
 
 El servidor recibe por parámetro: 
-	> IP
+	> IP (Falta)
 	> Puerto
-	> Cantidad máxima de jugadores simultáneos. (Falta)
-	> Ubicación de la BD. (Falta)
 
 
 El cliente realiza lo siguiente:
