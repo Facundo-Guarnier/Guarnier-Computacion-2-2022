@@ -36,8 +36,6 @@ def f_cliente(cli):
             print("error-s8")
 
 
-
-
 def jugador_generico(sock, q1, e1, pe, orden):
     while True:         #! Bucle de jugadas en una única partida.  
         
@@ -97,7 +95,6 @@ def abrir_socket(args):
     port = args.p
     ipv4 = (socket.getaddrinfo("localhost", args.p, socket.AF_INET, 1)[0][4][0])
     ipv6 = (socket.getaddrinfo("localhost", args.p, socket.AF_INET6, 1)[0][4][0])
-    print("Main PID:", os.getpid())
     
     try:     
         s4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -124,6 +121,7 @@ def abrir_socket(args):
 #! Cerrar los socket del lado del server cuando el cliente cerró su app con ctrl + c.
 #? No funciona, al momento de hacer el select.select, este se hace con clientes_objeto vacío, por lo tanto nunca avanza.
 def borrar_cliente_forzado():
+    print("  Hilo 'Borrar cliente forzado' ID:", threading.get_native_id())
 
     global clientes_objeto  
 
@@ -165,14 +163,14 @@ def aceptar_cliente(server4, server6, p):
                 s2,addr = server6.accept()
                 
             nickname = recibir_mensaje(s2)
-            print("----------------------------------------------------------------")
+            print("-----------------------------------------------------------------")
             print(f"  Nuevo cliente {j} {addr} : {nickname}")
             
             global lock
             lock.acquire()
             i = len(clientes_objeto)
             clientes_objeto.append(C_Cliente(s2, addr, nickname))
-            threading.Thread(target=f_cliente, args=(clientes_objeto[i],), name="Cliente {}".format(j)).start()
+            threading.Thread(target=f_cliente, args=(clientes_objeto[i],), name=f"Cliente {j}").start()
             lock.release()
             
             p.send(["conexion_jugador", nickname])       #! Envía a la BD el nickname, si no existe lo agrega. 
@@ -375,10 +373,8 @@ def partida(jugadores, p):
     threading.Thread(target=fin_partida, args=(j2,), name="Fin de partida del jugador 2").start()
 
 
-#! Fin de la partida por cada jugador.
-#! Anuncia al ganador y preguntar al cliente si desean finalizar la conexión o jugar otra vez.
-#! Al cliente le llegará un mensaje por el método recv() con longitud cero. Cuando esto  
-#! suceda, el cliente deberia cerrar su conexión con el .close() para liberar recursos.
+#* Hilo fin de la partida por cada jugador.
+#! Anuncia al ganador y pregunta al cliente si desean finalizar la conexión o jugar otra vez.
 def fin_partida(jugador):
     
     global clientes_objeto
@@ -413,7 +409,7 @@ def fin_partida(jugador):
         lock.release()
 
 
-#! Procesamiento del disparo
+#* Procesamiento del disparo
 #! Tiene que devolver [mensaje, tablero1, tablero2, estado]     (Estado = [True/False, descripcion])
 #! Errores: s1=Valores no validos, s2=Valores fuera de rango, s3=Disparo ya realizado, 
 #! tablero = {disparos_enemigos:DataFrame , mis_barcos:DataFrame, cant_hundidos:Int}
@@ -461,11 +457,11 @@ def jugada(msg, tablero1, tablero2):
                 return "Todos los barcos han sido hundidos!!!", tablero1, tablero2, [True, "FIN"]
         
             else:
-                return "HUNDIDO!! El disparo fue certero, {} fue hundido.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2, [True, "Hundido"]
+                return f"HUNDIDO!! El disparo fue certero, {tipo_barco(tablero2['mis_barcos'].iloc[fila, columna])} fue hundido.", tablero1, tablero2, [True, "Hundido"]
 
         #! Barco no hundido
         else:
-            return "TOCADO!! El disparo fue certero, {} afectado.".format(tipo_barco(tablero2["mis_barcos"].iloc[fila, columna])), tablero1, tablero2, [True, "Tocado"]
+            return f"TOCADO!! El disparo fue certero, {tipo_barco(tablero2['mis_barcos'].iloc[fila, columna])} afectado.", tablero1, tablero2, [True, "Tocado"]
 
 
 def es_hundido(fila, columna, tablero2):
@@ -506,8 +502,7 @@ def tipo_barco(letra):
         return "una Fragata"
 
 
-#* Proceso juego.  
-#! Se crean las instancias de los clientes.
+#* Proceso juego.
 def juego(server4, server6, p):
     print("  Proceso 'Juego' ID:", os.getpid())
     
@@ -524,34 +519,32 @@ def juego(server4, server6, p):
         global clientes_objeto
         jugadores_espera = []
         
-        time.sleep(6)
+        time.sleep(5)       #! Para no hacer spamming en la terminal.
         
         global lock
         lock.acquire()
-        for cliente in clientes_objeto:
+        clientes_objeto_copia = clientes_objeto
+        lock.release()
+        
+        for cliente in clientes_objeto_copia:
             if cliente.espera:
                 jugadores_espera.append(cliente)
                 
-                #TODO Esta medio raro que hayan dos "if len() > 2:". Tener en cuenta que la variable jugadores_espera es pasada al hilo partida.
                 if len(jugadores_espera) >= 2:
+                    print("+++++++++++++++++++ Se estableció una partida +++++++++++++++++++")
+                    threading.Thread(target=partida, args=(jugadores_espera, p), name="Partida").start()
+
+                    for cliente in jugadores_espera:
+                        cliente.espera = False
+                
+                    jugadores_espera = []
                     break
         
         
-        if len(jugadores_espera) >= 2:
-            print("++++++++++++++++++++ Se estableció una partida ++++++++++++++++++++")
-            threading.Thread(target=partida, args=(jugadores_espera, p), name="Partida").start()
-
-            for cliente in jugadores_espera:
-                cliente.espera = False
-        
-            jugadores_espera = []
-            
-
-        else:
+        if len(jugadores_espera) < 2:
             print("++++++++++++++++++++ Esperando jugador nuevo ++++++++++++++++++++")
-            print("  Total de jugadores:", len(clientes_objeto), "\n  ", [cliente.nickname for cliente in clientes_objeto] )
-            print("  Jugadores en espera:", len(jugadores_espera))
-        lock.release()
+            print(f"  Total de jugadores: {len(clientes_objeto_copia)} \n  {[cliente.nickname for cliente in clientes_objeto_copia]}")
+            print(f"  Jugadores en espera: {len(jugadores_espera)}")
 
 
 def señal(nro_senial, marco):
@@ -571,20 +564,17 @@ def señal(nro_senial, marco):
     os._exit(0)
 
 
+#* Proceso de Base de datos.
 def base_datos(p):
     #* Bucle esperando recibir algo por pipe, depende lo que sea hace un read o un write en mongo
     #* y devuelve por pipe el resultado en el caso de ser un read.
+    print("  Proceso 'Base de datos' ID:", os.getpid())
+    
     while True:
         msg1 = p.recv()
-        print("/////////// Proceso BD ///////////", msg1)
-        if msg1[0] == "read":
-            pass
         
-        elif msg1[0] == "write":
-            pass
-        
-        elif msg1[0] == "conexion_jugador":
-            #! Agrega al jugador a la BD si no existe. [conexion_jugador, nickname]
+        if msg1[0] == "conexion_jugador":
+            #! Agrega al jugador a la BD si no existe. [conexión_jugador, nickname]
             existe = existe_jugador_db.delay(msg1[1])
 
         elif msg1[0] == "fin_partida":
@@ -619,23 +609,20 @@ def main():
     
     
     
-
-    # threading.Lock()
-    # multiprocessing.Lock()
-    
-    
 if __name__ == '__main__':
     main()
 
 
 #TODO: En orden de prioridades.
+# Ver los TODO que tengo sueltos por ahi.
+
+# Ver lo que falta en el archivo funcionalidad_entidad.txt
+
 #// Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi).
 
 #// Usar locks para las variables globales, si o si.
 
 #// Usar MongoBD con celery y en un proceso aparte comunicado por pipe.
-
-# Ver lo que falta en el archivo funcionalidad_entidad.txt
 
 # Separar los barcos un lugar a los costados, no se pueden estar tocando.
 
