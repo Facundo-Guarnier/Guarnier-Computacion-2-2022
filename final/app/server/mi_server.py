@@ -20,21 +20,24 @@ def recibir_mensaje(s):
 def f_cliente(cli):   
     print("  Hilo 'Conexión' ID:", threading.get_native_id())
 
-    while True:     #! Si el jugador busca una nueva partida. 
+    seguir_jugando = True
+
+    while seguir_jugando:     #! Si el jugador busca una nueva partida. 
         mensaje = cli.q1.get()
             
         if "1" == mensaje[3][1]: 
-            enviar_mensaje(cli.s1, mensaje)     #! Creo que envía los tableros con barcos, sin disparos.
-            jugador1(cli.s1, cli.q1, cli.e1, cli.pe)
+            enviar_mensaje(cli.s1, mensaje)     #! Envía los tableros con barcos, sin disparos.
+            seguir_jugando = jugador1(cli.s1, cli.q1, cli.e1, cli.pe)
             
         elif "2" == mensaje[3][1]:
-            enviar_mensaje(cli.s1, mensaje)     #! Creo que envía los tableros con barcos, sin disparos.
+            enviar_mensaje(cli.s1, mensaje)     #! Envía los tableros con barcos, sin disparos.
             jugador2(cli.s1, cli.q1, cli.e1, cli.pe)
         
         else:
             print("error-s8")
 
 
+#TODO Refactorizar jugador 1 y 2.
 def jugador1(sock, q1, e1, pe):
     while True:     #! Bucle de jugadas en una única partida.  
         
@@ -42,7 +45,7 @@ def jugador1(sock, q1, e1, pe):
         while True:     #! Bucle de errores.
             msg1 = recibir_mensaje(sock)
                     
-            q1.put(msg1)     #* Pone el mensaje en la cola
+            q1.put(msg1)     #* Pone el mensaje en la cola, ataque.
             
             pe.wait()       #* Espera al hilo partida a que llegue al punto de encuentro (que ya pueda leer q1).
             
@@ -57,76 +60,79 @@ def jugador1(sock, q1, e1, pe):
                 break   #! Sale del bucle porque no hay error en el estado.
             
             elif not(msg2[3][0]):   #! Existe error. 
-                print("hilo jugador1, existe error, me quedo en el bucle")    
                 pass        #! Se queda en el bucle.
         
-        if msg2[3][1] == "FIN":     #! Cuando se termina la partida, esto se debe a que el socket se cierra.
-            msg1 = recibir_mensaje(sock)
-            q1.put(msg1)     
-            pe.wait()       
-            e1.wait()       
+        
+        if msg2[3][1] == "FIN":     #! Terminó la partida.
+            msg1 = recibir_mensaje(sock)        #! Continuar o salir.
+            
+            q1.put(msg1)        #! Envía el mensaje al hilo fin_partida. 
+            pe.wait()           
+            
+            e1.wait()           #! El hilo fin_partida terminó de procesar el continuar o salir.
             e1.clear()
             
             if msg1 == "salir":
-                break
+                return False       #! Sale del bucle de la partida.
             
             else:
                 msg2 = q1.get()         #! Envía el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
                 enviar_mensaje(sock, msg2)
                 
-                msg2 = q1.get()     #! Envía los tableros con barcos, sin disparos.
-                enviar_mensaje(sock, msg2)
+                return True       #! Sale del bucle de la partida.
                 
-                continue    #! Reinicia el bucle
 
         
-        #! Desde acá deberia empezar el jugador2
+        #! Jugador 2
         msg2 = q1.get()     #! Se queda esperando a que pueda consumir la respuesta al ataque del jugador 2 de la cola.
         enviar_mensaje(sock, msg2)
         
         
-        if msg2[3][1] == "FIN":     #! Cuando se termina la partida, esto se debe a que el socket se cierra.
-            msg1 = recibir_mensaje(sock)
-            q1.put(msg1)     
-            pe.wait()       
-            e1.wait()       
+        if msg2[3][1] == "FIN":     #! Terminó la partida.
+            msg1 = recibir_mensaje(sock)        #! Continuar o salir.
+            
+            q1.put(msg1)        #! Envía el mensaje al hilo fin_partida. 
+            pe.wait()           
+            
+            e1.wait()           #! El hilo fin_partida terminó de procesar el continuar o salir.
             e1.clear()
             
             if msg1 == "salir":
-                break
+                return False       #! Sale del bucle de la partida.
             
             else:
-                msg2 = q1.get() #* Mensaje del resultado del disparo.
+                msg2 = q1.get()         #! Envía el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
                 enviar_mensaje(sock, msg2)
+                
+                return True       #! Sale del bucle de la partida.
 
 
 def jugador2(sock, q1, e1, pe):
     while True:
-        #! Empieza el jugador 1.
+        #! Jugador 1.
         msg2 = q1.get()     #! Mensaje desde el hilo 'Partida'. Ataque jugador 1.
         enviar_mensaje(sock, msg2)      #! Envía el ataque del jugador 1 al cliente 2.
         
-        if msg2[3][1] == "FIN":     #! Cuando se termina la partida, esto se debe a que el socket se cierra.
-            msg1 = recibir_mensaje(sock)
-            q1.put(msg1)     
-            pe.wait()       
-            e1.wait()       
+        if msg2[3][1] == "FIN":     #! Terminó la partida.
+            msg1 = recibir_mensaje(sock)        #! Continuar o salir.
+            
+            q1.put(msg1)        #! Envía el mensaje al hilo fin_partida. 
+            pe.wait()           
+            
+            e1.wait()           #! El hilo fin_partida terminó de procesar el continuar o salir.
             e1.clear()
             
             if msg1 == "salir":
-                break
+                return False       #! Sale del bucle de la partida.
             
             else:
-                #TODO Mejorar esto. Creo que no puede haber 2 q.get asi nomas
-                msg2 = q1.get()     #! Envía el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
+                msg2 = q1.get()         #! Envía el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
                 enviar_mensaje(sock, msg2)
                 
-                msg2 = q1.get()     #! Envía los tableros con barcos, sin disparos.
-                enviar_mensaje(sock, msg2)
-                continue    #! Reinicia el bucle
+                return True       #! Sale del bucle de la partida.
         
         
-        #! Desde acá deberia empezar el jugador2
+        #! Jugador 2
         while True:     #! Bucle si es que existe un error en el estado.
 
             msg1 = recibir_mensaje(sock)
@@ -138,7 +144,7 @@ def jugador2(sock, q1, e1, pe):
             e1.wait()
             e1.clear()
             
-            msg2 = q1.get() #Mensaje desde el hilo 'Partida'
+            msg2 = q1.get() 
             
             enviar_mensaje(sock, msg2)
             
@@ -150,18 +156,23 @@ def jugador2(sock, q1, e1, pe):
                 pass
             
             
-        if msg2[3][1] == "FIN":     #! Cuando se termina la partida, esto se debe a que el socket se cierra.
-            msg1 = recibir_mensaje(sock)
-            q1.put(msg1)     
-            pe.wait()       
-            e1.wait()       
+        if msg2[3][1] == "FIN":     #! Terminó la partida.
+            msg1 = recibir_mensaje(sock)        #! Continuar o salir.
+            
+            q1.put(msg1)        #! Envía el mensaje al hilo fin_partida. 
+            pe.wait()           
+            
+            e1.wait()           #! El hilo fin_partida terminó de procesar el continuar o salir.
             e1.clear()
             
             if msg1 == "salir":
-                break
+                return False       #! Sale del bucle de la partida.
+            
             else:
-                msg2 = q1.get()     #! Mensaje del resultado del disparo.
+                msg2 = q1.get()         #! Envía el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
                 enviar_mensaje(sock, msg2)
+                
+                return True       #! Sale del bucle de la partida.
 
 
 def argumentos():
@@ -478,7 +489,6 @@ def fin_partida(jugador):
         jugador.e1.set()        #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
         jugador.s1.close()
         
-        
         global lock
         lock.acquire()
         #! Busca y elimina al jugador de la lista de jugadores.
@@ -705,9 +715,11 @@ if __name__ == '__main__':
 
 
 #TODO: En orden de prioridades.
+#* Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi).
+
 #// Usar locks para las variables globales, si o si.
 
-# Usar MongoBD con celery y en un proceso aparte comunicado por pipe.
+#// Usar MongoBD con celery y en un proceso aparte comunicado por pipe.
 
 # Ver lo que falta en el archivo funcionalidad_entidad.txt
 
@@ -720,8 +732,6 @@ if __name__ == '__main__':
 # ¿Como borrar un cliente que se desconectó con "ctrl + c"?
 
 # Investigar threading.RLock(), threading.BoundedSemaphore(), threading.Condition().
-
-#// Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi)
 
 #// Condición de fin de la partida cuando se hunden todos los barcos, los clientes 
 #// deberían terminan pero no lo hacen, el server detecta bien la condición.
