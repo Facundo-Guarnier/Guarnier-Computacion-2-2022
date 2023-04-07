@@ -1,10 +1,8 @@
-import socket, threading, os, multiprocessing, argparse, queue, time, signal, random, pickle, re, select, pymongo, celery
+import socket, threading, os, multiprocessing, argparse, time, signal, random, pickle, select, pymongo
 import pandas as pd
 from cliente import C_Cliente
-# from celery_task import write_to_mongo, read_from_mongo
 from celery_task import *
 
-# https://stackoverflow.com/questions/3991104/very-large-input-and-piping-using-subprocess-popen
 
 #! [msg, tablero1, tablero2, estado]
 def enviar_mensaje(s, m):
@@ -22,24 +20,26 @@ def recibir_mensaje(s):
 def f_cliente(cli):   
     print("  Hilo 'Conexión' ID:", threading.get_native_id())
 
-    mensaje = cli.q1.get()
+    while True:     #! Si el jugador busca una nueva partida. 
+        mensaje = cli.q1.get()
+            
+        if "1" == mensaje[3][1]: 
+            enviar_mensaje(cli.s1, mensaje)     #! Creo que envía los tableros con barcos, sin disparos.
+            jugador1(cli.s1, cli.q1, cli.e1, cli.pe)
+            
+        elif "2" == mensaje[3][1]:
+            enviar_mensaje(cli.s1, mensaje)     #! Creo que envía los tableros con barcos, sin disparos.
+            jugador2(cli.s1, cli.q1, cli.e1, cli.pe)
         
-    if "1" == mensaje[3][1]: 
-        enviar_mensaje(cli.s1, mensaje)     #! Creo que envía los tableros con barcos, sin disparos.
-        jugador1(cli.s1, cli.q1, cli.e1, cli.pe)
-        
-    elif "2" == mensaje[3][1]:
-        enviar_mensaje(cli.s1, mensaje)     #! Creo que envía los tableros con barcos, sin disparos.
-        jugador2(cli.s1, cli.q1, cli.e1, cli.pe)
-    
-    else:
-        print("error-s8")
+        else:
+            print("error-s8")
 
 
 def jugador1(sock, q1, e1, pe):
-    while True:
-        #! Empieza el jugador1
-        while True:     #! Bucle si es que existe un error en el estado.
+    while True:     #! Bucle de jugadas en una única partida.  
+        
+        #! Jugador1
+        while True:     #! Bucle de errores.
             msg1 = recibir_mensaje(sock)
                     
             q1.put(msg1)     #* Pone el mensaje en la cola
@@ -58,7 +58,7 @@ def jugador1(sock, q1, e1, pe):
             
             elif not(msg2[3][0]):   #! Existe error. 
                 print("hilo jugador1, existe error, me quedo en el bucle")    
-                pass
+                pass        #! Se queda en el bucle.
         
         if msg2[3][1] == "FIN":     #! Cuando se termina la partida, esto se debe a que el socket se cierra.
             msg1 = recibir_mensaje(sock)
@@ -74,10 +74,10 @@ def jugador1(sock, q1, e1, pe):
                 msg2 = q1.get()         #! Envía el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
                 enviar_mensaje(sock, msg2)
                 
-                # msg2 = q1.get()     #! Envía los tableros con barcos, sin disparos.
-                # enviar_mensaje(sock, msg2)
+                msg2 = q1.get()     #! Envía los tableros con barcos, sin disparos.
+                enviar_mensaje(sock, msg2)
                 
-                # continue    #! Reinicia el bucle
+                continue    #! Reinicia el bucle
 
         
         #! Desde acá deberia empezar el jugador2
@@ -208,7 +208,6 @@ def borrar_cliente_forzado():
         
         global lock
         lock.acquire()
-        
         clientes_copia = clientes_objeto.copy()     #! Esto es porque había problemas al estar recorriendo una lista y a su vez modificandola.
         for cliente in clientes_copia:      #! Cierra el socket y elimina al cliente de la lista de clientes
             if cliente.s1 in exceptional:
@@ -251,7 +250,7 @@ def aceptar_cliente(server4, server6, p):
             threading.Thread(target=f_cliente, args=(clientes_objeto[i],), name="Cliente {}".format(j)).start()
             lock.release()
             
-            # p.send(["jugador", nickname])       #! Envía a la BD el nickname, si no existe lo agrega. 
+            p.send(["conexion_jugador", nickname])       #! Envía a la BD el nickname, si no existe lo agrega. 
             
             j+=1
 
@@ -377,7 +376,7 @@ def turno(q_j, e_j, pe_j, tablero1, tablero2):
 
 
 #* Un hilo para cada partida (cada 2 jugadores).
-def partida(jugadores):
+def partida(jugadores, p):
     print("  Hilo 'Partida' ID:", threading.get_native_id())
 
     j1, j2 = jugadores 
@@ -399,6 +398,8 @@ def partida(jugadores):
     q_j2.put(["Ningún mensaje", tablero2, tablero1, [True, "2"]])
     
     i=0
+    
+    ganador = None
     
     while True:     #! Bucle para todas los turnos (partida completa).
         
@@ -427,11 +428,24 @@ def partida(jugadores):
                 elif not(estado[0]):    #! Existe error, por lo tanto se queda en el bucle del jugador.    
                     pass    #! Solo para representar cuando hay error, no tiene ninguna funcion real.
         
-        i+=1    #! Cuando no hay errores, pasa al proximo turno.
-        
         if estado[1] == "FIN":      #! Fin de la partida.
+            ganador = i%2       #! Si es 0, ganó el jugador 1.
             break   #! Sale del bucle de turnos para iniciar el fin de la partida.
         
+        i+=1    #! Cuando no hay errores, pasa al proximo turno.
+    
+    
+    if ganador==0:
+        p.send(["fin_partida", j1.nickname, "Ganador"])
+        p.send(["fin_partida", j2.nickname, "Perdedor"])
+    
+    elif ganador==1:
+        p.send(["fin_partida", j1.nickname, "Perdedor"])
+        p.send(["fin_partida", j2.nickname, "Ganador"])
+    else:
+        print("Imposible enviar resultados a la BD. error-s9")
+    
+    i=0
     threading.Thread(target=fin_partida, args=(j1,), name="Fin de partida del jugador 1").start()
     threading.Thread(target=fin_partida, args=(j2,), name="Fin de partida del jugador 2").start()
 
@@ -601,7 +615,7 @@ def juego(server4, server6, p):
         
         if len(jugadores_espera) >= 2:
             print("++++++++++++++++++++ Se estableció una partida ++++++++++++++++++++")
-            threading.Thread(target=partida, args=(jugadores_espera,), name="Partida").start()
+            threading.Thread(target=partida, args=(jugadores_espera, p), name="Partida").start()
 
             for cliente in jugadores_espera:
                 cliente.espera = False
@@ -634,25 +648,24 @@ def señal(nro_senial, marco):
 
 #TODO Conexión con la BD
 def base_datos(p):
-    client = pymongo.MongoClient('mongodb://localhost:27017/')
-    db = client.mydatabase
-    coleccion = db.jugadores
-    
-    
-    #* Bucle esperando recibir algo por pipe, depende lo que sea hace un read o un write en mongo y
+    #* Bucle esperando recibir algo por pipe, depende lo que sea hace un read o un write en mongo
     #* y devuelve por pipe el resultado en el caso de ser un read.
     while True:
         msg1 = p.recv()
-        
+        print("/////////// Proceso BD ///////////", msg1)
         if msg1[0] == "read":
             pass
         
         elif msg1[0] == "write":
             pass
         
-        elif msg1[0] == "jugador":
-            existe_jugador(coleccion)
+        elif msg1[0] == "conexion_jugador":
+            #! Agrega al jugador a la BD si no existe. [conexion_jugador, nickname]
+            existe = existe_jugador_db.delay(msg1[1])
 
+        elif msg1[0] == "fin_partida":
+            #! Guarda el resultado. [fin_partida, nickname, resultado]
+            fin_partida_db(msg1[1],msg1[2])
 
 
 def main():
@@ -678,7 +691,7 @@ def main():
     p_juego = multiprocessing.Process(target=juego, args=(server4, server6, p1), name="Juego").start()
 
     #! Proceso BD
-    # p_bd = multiprocessing.Process(target=base_datos, args=(p2, )).start()
+    p_bd = multiprocessing.Process(target=base_datos, args=(p2, ), name="Base de datos").start()
     
     
     

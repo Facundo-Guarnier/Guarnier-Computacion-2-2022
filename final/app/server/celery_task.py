@@ -1,3 +1,4 @@
+import pymongo
 from celery_confg import app
 
 """
@@ -14,23 +15,14 @@ from celery_confg import app
     db.<collection_name>.deleteMany(<filter>): Elimina varios documentos que cumplan con el filtro especificado.
 """
 
+client = pymongo.MongoClient('mongodb://localhost:27017/')
+db = client.BatallaNaval
+coleccion = db.jugadores
 
-
-@app.task
-def write_to_mongo(coleccion, data):
-    coleccion.insert_one(data)
-
-
-@app.task
-def read_from_mongo(coleccion):
-    result = []
-    for item in coleccion.find():
-        result.append(item)
-    return result
 
 
 @app.task
-def existe_jugador(coleccion, jugador):
+def existe_jugador_db(jugador):
     resultado = coleccion.find_one({"nickname":jugador})
 
     if resultado is not None:     #! Existe el jugador en la BD, no hay que hacer nada. 
@@ -39,3 +31,8 @@ def existe_jugador(coleccion, jugador):
     else:           #! No existe el jugador, hay que agregarlo.
         coleccion.insert_one({"nickname":jugador, "ultima_partida":"nada"})
         return False
+
+
+@app.task
+def fin_partida_db(nickname, resultado):
+    coleccion.update_one({"nickname":nickname}, {'$set': {"ultima_partida":resultado}})

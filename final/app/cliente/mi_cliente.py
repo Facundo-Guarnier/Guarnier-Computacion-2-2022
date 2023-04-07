@@ -1,6 +1,5 @@
 import ipaddress
 import socket, argparse, os, datetime, pickle, re
-from mi_gui import gui
 
 def hora_actual():
     return datetime.datetime.now().strftime("%H:%M:%S")
@@ -99,19 +98,19 @@ def seguir_jugando(s):
         msg1 = input(f"[ C {hora_actual()} ] Continuar o salir: ").lower()
         
         if msg1 == "continuar":
-            print(f"[ C  {hora_actual()} ] Entraste en continuar")
+            print(f"[ C {hora_actual()} ] Entraste en continuar")
             enviar_mensaje(s, msg1)
             mensaje = recibir_mensaje(s)        
             print(f"[ S {hora_actual()} ] {mensaje}")
             return True
         
         elif msg1 == "salir":
-            print(f"[ C  {hora_actual()} ] Entraste en salir")
+            print(f"[ C {hora_actual()} ] Entraste en salir")
             enviar_mensaje(s, msg1)
             return False
         
         else: 
-            print(f"[ C  {hora_actual()} ] Escribí bien bro...", msg1)
+            print(f"[ C {hora_actual()} ] Escribí bien bro...", msg1)
 
 
 def juego(s):
@@ -156,7 +155,7 @@ def jugador(s, orden):
                 respuesta = recibir_ataque(s)
             
             if respuesta[3][1] == "FIN":
-                print(f"[ C  {hora_actual()} ] FIN DE LA PARTIDA.")
+                print(f"[ C {hora_actual()} ] FIN DE LA PARTIDA.")
 
                 nueva_partida = seguir_jugando(s)       #! Buscar una nueva partida o no.
                 continuar_partida = False               #! Terminar partida actual.
