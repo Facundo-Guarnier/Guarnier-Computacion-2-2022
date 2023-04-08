@@ -579,7 +579,7 @@ def base_datos(p):
 
         elif msg1[0] == "fin_partida":
             #! Guarda el resultado. [fin_partida, nickname, resultado]
-            fin_partida_db(msg1[1],msg1[2])
+            fin_partida_db.delay(msg1[1],msg1[2])
 
 
 def main():
@@ -623,8 +623,6 @@ if __name__ == '__main__':
 #// Usar locks para las variables globales, si o si.
 
 #// Usar MongoBD con celery y en un proceso aparte comunicado por pipe.
-
-# Separar los barcos un lugar a los costados, no se pueden estar tocando.
 
 #// Cada usuario pueda poner su nickname personalizado.
 

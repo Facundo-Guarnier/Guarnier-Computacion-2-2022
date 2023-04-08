@@ -20,7 +20,6 @@ db = client.BatallaNaval
 coleccion = db.jugadores
 
 
-
 @app.task
 def existe_jugador_db(jugador):
     resultado = coleccion.find_one({"nickname":jugador})
