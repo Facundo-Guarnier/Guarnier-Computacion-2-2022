@@ -1,9 +1,9 @@
 Descripcion App: Batalla Naval
 
 El juego consiste en dos jugadores que compiten por hundir los barcos del otro. Cada 
-jugador tiene su propio tablero con sus barcos y marca los disparos que recibe del 
-oponente. El objetivo es hundir todos los barcos del oponente antes de que él hunda 
-los tuyos.
+jugador tiene su propio tablero con sus barcos, los disparos que recibe del 
+oponente y los disparos realizados por el jugador. El objetivo es hundir todos los
+barcos del oponente antes de que él hunda los tuyos.
 
 Existen 5 tipos de barcos:
     > Lancha torpedera, longitud 1 unidad.

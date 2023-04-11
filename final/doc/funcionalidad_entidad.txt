@@ -13,22 +13,24 @@ El Server es el encargado de:
       partida en MongoDb utilizando Celery.
 
 El servidor recibe por parámetro: 
-	> IP (Falta)
-	> Puerto
+    > IP (Falta)
+    > Puerto
 
 
 El cliente realiza lo siguiente:
     > Comprueba si el server existe.
     > Espera a que se le asigne una partida.
     > Enviar las coordenadas de cada disparo.
-    > Mostrar (por consola o GUI) el estado de la partida.
+    > Mostrar por consola el estado de la partida.
 
 El cliente recibe por parámetro:
-	> IP del server
-	> Puerto del server
-	> Nickname
+    > IP del server
+    > Puerto del server
+    > Nickname
 
-Cada cliente se le es asignado, por el lado del servidor:
+El servidor crea una instancia por cada cliente con los siguientes atributos:
+    > nickname
+    > address
     > Socket (s2)
     > Queue (q1)
     > Event (e1)

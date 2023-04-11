@@ -112,7 +112,7 @@ def abrir_socket(args):
         print("Server 'ON' IPv6 <" + ipv6 + ": " + str(port) + ">")
         
     except Exception as e:
-        print("/////////////////////////////// NO SE PUEDE INICIAR EL SERVER con IPv4")
+        print("/////////////////////////////// NO SE PUEDE INICIAR EL SERVER con IPv6")
 
     return s4, s6
 
@@ -216,11 +216,12 @@ def matriz_barco_random():
                         if matriz.iloc[y, x_inicio+i] != " ":
                             estado = False
                             contador_error += 1
-                            
+                            break
                     else:
                         if matriz.iloc[y, x_inicio-i] != " ":
                             estado = False
                             contador_error += 1
+                            break
                         
                 if estado and derecha:
                     for i in range(tamaño+1):
@@ -236,7 +237,7 @@ def matriz_barco_random():
                     contador_error = 0
                     tipos = ["L", "F", "D", "S", "P"]  
                     tamaño = -1
-                    estado = True
+                    estado = False
                     
             tamaño -= 1
             
@@ -258,10 +259,12 @@ def matriz_barco_random():
                         if matriz.iloc[y_inicio+i, x] != " ":
                             estado = False
                             contador_error += 1
-                        else:
-                            if matriz.iloc[y_inicio-i, x] != " ":
-                                estado = False
-                                contador_error += 1
+                            break
+                    else:
+                        if matriz.iloc[y_inicio-i, x] != " ":
+                            estado = False
+                            contador_error += 1
+                            break
                         
                 if estado and abajo:
                     for i in range(tamaño+1):
@@ -277,7 +280,7 @@ def matriz_barco_random():
                     contador_error = 0
                     tipos = ["L", "F", "D", "S", "P"]  
                     tamaño = -1
-                    estado = True
+                    estado = False
                     
             tamaño -= 1
             
@@ -357,15 +360,15 @@ def partida(jugadores, p):
         
         i+=1    #! Cuando no hay errores, pasa al proximo turno.
     
-    
-    if ganador==0:
-        p.send(["fin_partida", j1.nickname, "Ganador"])
-        p.send(["fin_partida", j2.nickname, "Perdedor"])
-    
-    elif ganador==1:
-        p.send(["fin_partida", j1.nickname, "Perdedor"])
-        p.send(["fin_partida", j2.nickname, "Ganador"])
-    else:
+    try:
+        if ganador==0:
+            p.send(["fin_partida", j1.nickname, "Ganador"])
+            p.send(["fin_partida", j2.nickname, "Perdedor"])
+        
+        elif ganador==1:
+            p.send(["fin_partida", j1.nickname, "Perdedor"])
+            p.send(["fin_partida", j2.nickname, "Ganador"])
+    except:
         print("Imposible enviar resultados a la BD. error-s9")
     
     i=0
@@ -406,6 +409,7 @@ def fin_partida(jugador):
             if cliente.nickname == jugador.nickname:
                 print(jugador.nickname, "Entraste en borrar jugador.")
                 clientes_objeto.remove(cliente)
+                break
         lock.release()
 
 
@@ -510,7 +514,7 @@ def juego(server4, server6, p):
     threading.Thread(target=aceptar_cliente, args=(server4, server6, p), name="Aceptar cliente").start()
 
     #! Hilo para borrar clientes forzados a cierre.
-    threading.Thread(target=borrar_cliente_forzado, name="Borrar cliente forzados").start()
+    # threading.Thread(target=borrar_cliente_forzado, name="Borrar cliente forzados").start()
 
 
     #! Acá tiene que leer el diccionario y cada 2 en estado de espera crear una partida 
@@ -614,9 +618,13 @@ if __name__ == '__main__':
 
 
 #TODO: En orden de prioridades.
+#* Creo que ya lo arreglé. AL momento de crear los barcos, estos pueden aparecer encimados. 
+
 # Ver los TODO que tengo sueltos por ahi.
 
 # Ver lo que falta en el archivo funcionalidad_entidad.txt
+
+# Arreglar o borrar borrar_cliente_forzado.
 
 #// Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi).
 
