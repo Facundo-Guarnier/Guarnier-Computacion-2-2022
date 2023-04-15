@@ -31,7 +31,7 @@ def recibir_mensaje(s):
 def argumentos():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, required=False, help="Puerto", default= 5000)
-    parser.add_argument("-d", required=False, help="Dirección IPv4 o  IPv6", default= "0.0.0.0")
+    parser.add_argument("-d", type=str, required=False, help="Dirección IPv4 o  IPv6", default= "0.0.0.0")
     parser.add_argument("-n", type=str, required=False, help="Nickname", default= "Jugador")
 
     return parser.parse_args()

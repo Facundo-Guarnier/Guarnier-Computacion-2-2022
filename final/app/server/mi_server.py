@@ -88,13 +88,16 @@ def jugador_generico(sock, q1, e1, pe, orden):
 def argumentos():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, required=False, help="port", default=5000)
+    parser.add_argument("-i4", type=str, required=False, help="IPv4", default=(socket.getaddrinfo("localhost", 5000, socket.AF_INET, 1)[0][4][0]))
+    parser.add_argument("-i6", type=str, required=False, help="IPv6", default=(socket.getaddrinfo("localhost", 5000, socket.AF_INET6, 1)[0][4][0]))
+    
     return parser.parse_args()
 
 
 def abrir_socket(args):
     port = args.p
-    ipv4 = (socket.getaddrinfo("localhost", args.p, socket.AF_INET, 1)[0][4][0])
-    ipv6 = (socket.getaddrinfo("localhost", args.p, socket.AF_INET6, 1)[0][4][0])
+    ipv4 = args.i4
+    ipv6 = args.i6
     
     try:     
         s4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -103,7 +106,8 @@ def abrir_socket(args):
         print("Server 'ON' IPv4 <" + ipv4 + ": " + str(port) + ">")
 
     except Exception as e:
-        print("/////////////////////////////// NO SE PUEDE INICIAR EL SERVER con IPv4")
+        print("// NO SE PUEDE INICIAR EL SERVER con IPv4 -> " + ipv4)
+        s4 = None
     
     try:     
         s6 = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
@@ -112,7 +116,8 @@ def abrir_socket(args):
         print("Server 'ON' IPv6 <" + ipv6 + ": " + str(port) + ">")
         
     except Exception as e:
-        print("/////////////////////////////// NO SE PUEDE INICIAR EL SERVER con IPv6")
+        print("// NO SE PUEDE INICIAR EL SERVER con IPv6 -> " + ipv6)
+        s6 = None
 
     return s4, s6
 
@@ -143,7 +148,13 @@ def aceptar_cliente(server4, server6, p):
     print("  Hilo 'Aceptar_cliente' ID:", threading.get_native_id())
     
     global clientes_objeto
-    lectura = [server4, server6]
+    lectura = []
+    if server4 != None:
+        lectura.append(server4)
+        
+    if server6 != None:
+        lectura.append(server6)
+    
     escritura = []
     excpecion = []
     
