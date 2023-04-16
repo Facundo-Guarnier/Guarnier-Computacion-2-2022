@@ -1,0 +1,11 @@
+Servidor: 
+Al momento de ejecutar el servidor, se puede pasar los parametros puerto, ipv4 e ipv6.
+Una vez ejecutado no hay nada mas que hacer.
+
+Cliente: 
+Al momento de ejecutar el cliente, se debe pasar el parametro nickname y puede pasar los parametros puerto, ipv4 o ipv6.
+Una vez conectado al server debe esperar a que encuentre una partida.
+Cuando se encuentra una partida, se mostrará los tableros con bascos y disparos.
+AL momento de ingresar las coordenadas, estas no deben ser repetidas ni fuera del rango de los tableros. 
+El servidor mostrará si el disparo fue Agua, Tocado o Hundido.
+Al finalizar la partida se podrá elegir si continuar (buscar otra partida) o salir de la app.

@@ -1,9 +1,7 @@
-# FROM ubuntu:latest
 FROM redis
-# FROM python:3.9
 
 #! Variables
-ENV puerto 5000
+ENV p 5000
 
 
 #! Intalar MongoDB
@@ -26,7 +24,6 @@ RUN mkdir /home/db
 WORKDIR /home/downloads/
 RUN wget https://downloads.mongodb.com/compass/mongodb-mongosh_1.8.0_amd64.deb
 RUN dpkg -i mongodb-mongosh_1.8.0_amd64.deb
-
 # CMD mongod --dbpath ~/home/db
 
 
@@ -66,32 +63,34 @@ WORKDIR /home/repo_git/Computacion_2/final/app/server
 #! Instalar Celery 
 RUN pip install celery
 RUN pip install celery[redis]
-
 # CMD celery -A celery_task worker --loglevel=INFO -c4
 
 
-
 #! Documentar puertos que el contenedor utilizará. 
-EXPOSE 6379
-EXPOSE 27017
-EXPOSE 5000
+# Puerto redis.
+EXPOSE 6379 
+# Puero server.
+EXPOSE $p
 
 
 #! Ejecucion en paralelo de 2 o mas comandos.
-CMD mongod --dbpath /home/db --fork --logpath /var/log/mongodb.log \
-    && redis-server --daemonize yes \
-    && celery -A celery_task worker --loglevel=INFO --detach\
-    && tail -f /dev/null  
+CMD mongod --dbpath /home/db --fork --logpath /var/log/mongodb.log >/dev/null 2>&1 \
+    && redis-server --daemonize yes >/dev/null 2>&1 \
+    && celery -A celery_task worker --loglevel=INFO --detach >/dev/null 2>&1 \
+    && bash
 #! Mongo: El --dbpath indica la ruta de la DB. El --fork indica que se debe ejecutar en segundo plano esto obliga usar --logpath para guardar el regustro en un archivo.
 #! Redis: --daemonize indica que se ejecute en segundo plano. testiar con redis-cli ping.
 #! Celery: --detach indica que se ejecute en segundo plano.
-#! tail -f /dev/null Hace que el contenedor se quede leyendo un documento, esto evita que se cierre el contenedo apenas termine de ejecutar los comandos anteriores.
+#! >/dev/null 2>&1: Envia la salida estandar y la de error a la nada.
+
+
 
 #* Comandos de Docker
 #! Crear una imagen a travez del dockerfile.
 # docker build -t nombre_new_imagen .
 
 #! Crear un contenedor dese una imagen
+# docker run -it -p 5000:5000 my_image
 # docker run -it -e puerto=5000 my_image
 # docker run -it -e puerto=5000 -p 5000:5000 imagen_compu2
 

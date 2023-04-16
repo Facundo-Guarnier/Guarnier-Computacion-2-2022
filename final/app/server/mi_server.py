@@ -1,4 +1,4 @@
-import socket, threading, os, multiprocessing, argparse, time, signal, random, pickle, select, pymongo
+import socket, threading, os, multiprocessing, argparse, time, signal, random, pickle, select
 import pandas as pd
 from cliente import C_Cliente
 from celery_task import *
@@ -467,8 +467,8 @@ def jugada(msg, tablero1, tablero2):
             tablero2["cant_hundidos"] = tablero2["cant_hundidos"] + 1
         
             #* 3.2 - Comprobar si se hundieron todos los barcos.
-            # if tablero2["cant_hundidos"] >= 5:
-            if tablero2["cant_hundidos"] >= 1:
+            if tablero2["cant_hundidos"] >= 5:
+            # if tablero2["cant_hundidos"] >= 1:
                 return "Todos los barcos han sido hundidos!!!", tablero1, tablero2, [True, "FIN"]
         
             else:

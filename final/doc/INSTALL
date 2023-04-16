@@ -1,0 +1,6 @@
+1. Descargar la imagen de docker.
+
+2. $ docker run -it -p <puerto>:<puerto> -e p=<puerto> nombre_imagen
+    Donde <puerto> es el puerto que se va a tulizar en el server.
+
+3. En la carpeta app/server: $ python3 mi_server.py -p <puerto> -i4 <ipv4> -i6 <ipv6> 

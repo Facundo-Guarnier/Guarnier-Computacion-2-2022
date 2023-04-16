@@ -1,4 +1,4 @@
-Por ahora cada funcion está explicada en el código (comentado).
+Cada funcion está explicada en el código (comentado).
 
 El Server es el encargado de: 
     > Un hilo (aceptar_clientes) encargado de establecer conexión 
@@ -13,7 +13,8 @@ El Server es el encargado de:
       partida en MongoDb utilizando Celery.
 
 El servidor recibe por parámetro: 
-    > IP (Falta)
+    > IPv4
+    > IPv6
     > Puerto
 
 
@@ -24,9 +25,9 @@ El cliente realiza lo siguiente:
     > Mostrar por consola el estado de la partida.
 
 El cliente recibe por parámetro:
-    > IP del server
+    > IP del server (v4 o v6)
     > Puerto del server
-    > Nickname
+    > Nickname (obligatorio)
 
 El servidor crea una instancia por cada cliente con los siguientes atributos:
     > nickname

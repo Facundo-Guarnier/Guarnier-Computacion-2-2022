@@ -1,0 +1,15 @@
+Utilice threading para manejar a los clientes ya que estos no bloquean al programa y son 
+menos costosos al momento de cambiar en la CPU. 
+
+Utilice procesos para el Juego y la BD ya que son tareas totalmente distintas y que van 
+a requerir mas utilización de la CPU y nunca se bloquean.  
+
+Utilice pipe para comunicar los 2 proceso ya que consta con dos extremos, uno para cada proceso. Cada 
+extremo se utiliza para enviar y recibir datos a través del pipe. 
+
+Utilice Queue, Event y Barrier para la comunicación y sincronización entre los hilos. El Queue para enviar 
+los mensajes, mientras que Event y Barrier para avisar del estado de un hilo a otro y poder saber cuando 
+puede consumir o no del Queue. 
+
+Utilice Celery para las consultas en la BD y así dividirlas en tareas y distribuirlas a varios procesos. De
+esta forma no se bloquea el proceso.  
