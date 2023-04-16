@@ -53,6 +53,7 @@ RUN pip3 install pandas
 RUN apt-get install -y git
 WORKDIR /home/repo_git/
 RUN git clone https://github.com/Facundo-Guarnier/Computacion_2.git
+RUN git pull
 WORKDIR /home/repo_git/Computacion_2/final/app/server
 
 
