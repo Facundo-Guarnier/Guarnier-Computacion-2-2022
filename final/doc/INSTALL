@@ -1,4 +1,5 @@
 1. Descargar la imagen de docker.
+    $ docker pull facundoguarnier/computacion-2_2022:<version>
 
 2. $ docker run -it -p <puerto>:<puerto> -e p=<puerto> nombre_imagen
     Donde <puerto> es el puerto que se va a tulizar en el server.

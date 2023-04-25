@@ -49,6 +49,7 @@ RUN pip3 install motor
 RUN pip3 install pandas
 
 
+
 #! Instalar git y clonar repo
 RUN apt-get install -y git
 WORKDIR /home/repo_git/
@@ -90,6 +91,7 @@ CMD mongod --dbpath /home/db --fork --logpath /var/log/mongodb.log >/dev/null 2>
 #* Comandos de Docker
 #! Crear una imagen a travez del dockerfile.
 # docker build -t facundoguarnier/computacion-2_2022:<version> .
+# docker build --no-cache -t facundoguarnier/computacion-2_2022:<version> .
 
 #! Crear un contenedor dese una imagen
 # docker run -it -p 5000:5000 my_image

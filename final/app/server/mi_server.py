@@ -88,18 +88,21 @@ def jugador_generico(sock, q1, e1, pe, orden):
 def argumentos():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, required=False, help="port", default=5000)
-    parser.add_argument("-i4", type=str, required=False, help="IPv4", default=(socket.getaddrinfo("localhost", 5000, socket.AF_INET, 1)[0][4][0]))
-    parser.add_argument("-i6", type=str, required=False, help="IPv6", default=(socket.getaddrinfo("localhost", 5000, socket.AF_INET6, 1)[0][4][0]))
-    
+    parser.add_argument("-i4", type=str, required=False, help="IPv4", default=("localhost"))
+    parser.add_argument("-i6", type=str, required=False, help="IPv6", default=("::1"))
+
+
+
     return parser.parse_args()
 
 
 def abrir_socket(args):
     port = args.p
-    ipv4 = args.i4
-    ipv6 = args.i6
+    # ipv4 = args.i4
+    # ipv6 = args.i6
     
-    try:     
+    try:
+        ipv4 = socket.getaddrinfo(args.i4, args.p, socket.AF_INET, 1)[0][4][0]
         s4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s4.bind((ipv4, port))
         s4.listen()
@@ -110,6 +113,7 @@ def abrir_socket(args):
         s4 = None
     
     try:     
+        ipv6 = socket.getaddrinfo(args.i6, args.p, socket.AF_INET6, 1)[0][4][0]
         s6 = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         s6.bind((ipv6, port))
         s6.listen()
