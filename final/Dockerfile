@@ -94,9 +94,7 @@ CMD mongod --dbpath /home/db --fork --logpath /var/log/mongodb.log >/dev/null 2>
 # docker build --no-cache -t facundoguarnier/computacion-2_2022:<version> .
 
 #! Crear un contenedor dese una imagen
-# docker run -it -p 5000:5000 my_image
-# docker run -it -e puerto=5000 my_image
-# docker run -it -e puerto=5000 -p 5000:5000 imagen_compu2
+# docker run -it -e p=5000 -p 5000:5000 facundoguarnier/computacion-2_2022:<version>
 
 #! iniciar un contenedor
 # docker start nombre_contenedor

@@ -1,4 +1,9 @@
-En futuras versiones me gustaria implementar "curses" que proporciona una forma de 
-controlar la pantalla de texto en la terminal y poder hacer aplicaciones de terminal interactivas. 
+En futuras versiones me gustaria implementar:
+    > "curses" que proporciona una forma de controlar la pantalla de texto en la 
+    terminal y poder hacer aplicaciones de terminal interactivas. 
 
-Ademas de curses, quiero implementar una interfaz gráfica para el cliente a traves de la libreria "Tkinter".
+    > Ademas de curses, quiero implementar una interfaz gráfica para el cliente 
+    a traves de la libreria "Tkinter".
+
+    > Algún mecanismo de recuperación o manejo de errores cuando los clientes se 
+    desconectan de forma forzosa. 

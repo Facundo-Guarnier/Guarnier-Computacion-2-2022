@@ -1,15 +1,55 @@
-Utilice threading para manejar a los clientes ya que estos no bloquean al programa y son 
-menos costosos al momento de cambiar en la CPU. 
+Threading.Thread(): En el lado del servidor, utilicé hilos para manejar a los clientes ya que estos no bloquean 
+el programa y son menos costosos al momento de cambiar en la CPU. Cada cliente que se conecta al servidor 
+se maneja en su propio hilo, lo que permite manejar múltiples clientes simultáneamente sin interrupciones 
+en el servidor.
 
-Utilice procesos para el Juego y la BD ya que son tareas totalmente distintas y que van 
-a requerir mas utilización de la CPU y nunca se bloquean.  
+multiprocessing.Process(): Utilicé procesos para el Juego y la Base de Datos ya que son tareas totalmente distintas y que 
+van a requerir más utilización de la CPU. De esta manera, el proceso del juego puede manejar múltiples 
+partidas simultáneamente sin interrupciones en la Base de Datos.
 
-Utilice pipe para comunicar los 2 proceso ya que consta con dos extremos, uno para cada proceso. Cada 
-extremo se utiliza para enviar y recibir datos a través del pipe. 
+multiprocessing.Pipe(): Utilicé un pipe para comunicar los 2 procesos ya que consta de dos extremos, uno para cada proceso. 
+Cada extremo se utiliza para enviar y recibir datos a través del pipe. En este caso, el proceso del juego 
+envía el nombre de los jugadores y los resultados de la partida a través del pipe al proceso de la Base de Datos.
 
-Utilice Queue, Event y Barrier para la comunicación y sincronización entre los hilos. El Queue para enviar 
-los mensajes, mientras que Event y Barrier para avisar del estado de un hilo a otro y poder saber cuando 
-puede consumir o no del Queue. 
+Queue, Event y Barrier: Utilicé estas herramientas para la comunicación y sincronización entre los hilos. 
+El Queue se utiliza para enviar los mensajes entre los hilos, mientras que el Event y el Barrier se utilizan 
+para avisar del estado de un hilo a otro y poder saber cuando puede consumir o no del Queue. Por ejemplo, el 
+hilo cliente carga los datos en el Queue y activa el Barrier para que el hilo partida lea el Queue, este hilo 
+procesa la jugada y envía el resultado a los dos jugadores a través del Queue y activa el Event y los hilos 
+de los jugadores leen el Queue.
 
-Utilice Celery para las consultas en la BD y así dividirlas en tareas y distribuirlas a varios procesos. De
-esta forma no se bloquea el proceso.  
+Celery: Utilice Celery para las consultas en la Base de Datos y así dividirlas en tareas y distribuirlas a 
+varios procesos. De esta forma, no se bloquea el proceso del juego y se pueden realizar varias escrituras simultáneas 
+a la Base de Datos de forma eficiente. Dentro de las tareas de Celery utilicé pymongo para interactuar con 
+la Base de Datos MongoDB.
+
+Queue.queue(): Lo utilizo para la comunicación entre los hilos. Un hilo puede añadir un objeto a la cola 
+y otro hilo puede retirarlo.
+
+multiprocessing.Pipe(): Lo utilizo para crear un canal de comunicación bidireccional (pipe) entre dos procesos.
+
+threading.Lock(): Lo utilicé como mecanismo de sincronización entre hilos y evitar que varios hilos accedan 
+al mismo recurso al mismo tiempo (clientes_objeto), lo que podría causar problemas como la corrupción de 
+datos o errores de concurrencia. 
+
+
+Cada funcion del código está explicada en el código (comentado).
+
+El Server es el encargado de: 
+    > Un hilo (aceptar_clientes) encargado de establecer conexión 
+      con los clientes y dedicarle un hilo (cliente).
+    > Asignar una partida cada dos clientes. Cada partida es un hilo.
+	  > Los 3 hilos (2 clientes y 1 partida) relacionados para la partida 
+      se comunican via Queue, Event y punto de encuentro (Barrier).
+    > El hilo partida crea los tableros con los barcos, gestiona cada 
+      disparo (Agua, Tocado, Hundido), determina el fin de la partida y 
+      envía el estado de los tableros y de cada disparo a los clientes.
+    > Un procesos es el encargado de almacenar los resultados de la 
+      partida en MongoDB utilizando Celery.
+
+
+El cliente realiza lo siguiente:
+    > Comprueba si el server existe.
+    > Espera a que se le asigne una partida.
+    > Enviar las coordenadas de cada disparo.
+    > Mostrar por consola el estado de la partida.
