@@ -48,6 +48,8 @@ def abrir_socket(args):
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect((host, port))
             enviar_mensaje(s, args.n)
+            print("Conexión exitosa.")
+            
             return s
 
         
@@ -55,10 +57,11 @@ def abrir_socket(args):
             s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
             s.connect((host, port))
             enviar_mensaje(s, args.n)
+            print("Conexión exitosa.")
             return s
 
         else:
-            print("Dirección ingresada no valida como IPv4 o IPv6")
+            print("Dirección ingresada no valida como IPv4 o IPv6.")
             os._exit(0)
 
     except:

@@ -110,6 +110,7 @@ def abrir_socket(args):
 
     except Exception as e:
         print("// NO SE PUEDE INICIAR EL SERVER con IPv4 -> " + ipv4)
+        print(e)
         s4 = None
     
     try:     
@@ -121,6 +122,7 @@ def abrir_socket(args):
         
     except Exception as e:
         print("// NO SE PUEDE INICIAR EL SERVER con IPv6 -> " + ipv6)
+        print(e)
         s6 = None
 
     return s4, s6
@@ -585,8 +587,7 @@ def señal(nro_senial, marco):
 
 #* Proceso de Base de datos.
 def base_datos(p):
-    #* Bucle esperando recibir algo por pipe, depende lo que sea hace un read o un write en mongo
-    #* y devuelve por pipe el resultado en el caso de ser un read.
+    #* Bucle esperando recibir algo por pipe, depende lo que sea hace un read o un write en mongodb.
     print("  Proceso 'Base de datos' ID:", os.getpid())
     
     while True:
@@ -633,13 +634,13 @@ if __name__ == '__main__':
 
 
 #TODO: En orden de prioridades.
-#* Creo que ya lo arreglé. AL momento de crear los barcos, estos pueden aparecer encimados. 
+#// Creo que ya lo arreglé. AL momento de crear los barcos, estos pueden aparecer encimados. 
 
-# Ver los TODO que tengo sueltos por ahi.
+#// Ver los TODO que tengo sueltos por ahi.
 
-# Ver lo que falta en el archivo funcionalidad_entidad.txt
+#// Ver lo que falta en el archivo funcionalidad_entidad.txt
 
-# Arreglar o borrar borrar_cliente_forzado.
+#// Arreglar o borrar borrar_cliente_forzado.
 
 #// Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi).
 
@@ -648,12 +649,6 @@ if __name__ == '__main__':
 #// Usar MongoBD con celery y en un proceso aparte comunicado por pipe.
 
 #// Cada usuario pueda poner su nickname personalizado.
-
-# Usar "curses" para mostrar mejor el texto en terminal. Es lo que me recomendó el luisma.
-
-# ¿Como borrar un cliente que se desconectó con "ctrl + c"?
-
-# Investigar threading.RLock(), threading.BoundedSemaphore(), threading.Condition().
 
 #// Condición de fin de la partida cuando se hunden todos los barcos, los clientes 
 #// deberían terminan pero no lo hacen, el server detecta bien la condición.
