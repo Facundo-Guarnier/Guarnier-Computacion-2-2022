@@ -4,103 +4,18 @@ from cliente import C_Cliente
 from celery_task import *
 
 
-#! [msg, tablero1, tablero2, estado]
-def enviar_mensaje(s, m):
-    # print("Mensaje enviado:",m)
-    s.send(pickle.dumps(m))
-
-
-def recibir_mensaje(s):
-    mensaje = s.recv(10000) 
-    # print("Mensaje recibido:", mensaje)
-    return pickle.loads(mensaje)
-
-
-#* Un ilo para cada uno de los clientes.
-def f_cliente(cli):   
-    print("  Hilo 'Conexión' ID:", threading.get_native_id())
-
-    seguir_jugando = True
-
-    while seguir_jugando:     #! Si el jugador busca una nueva partida. 
-        mensaje = cli.q1.get()
-        enviar_mensaje(cli.s1, mensaje)     #! Envía los tableros con barcos, sin disparos.
-            
-        if "1" == mensaje[3][1]: 
-            seguir_jugando = jugador_generico(cli.s1, cli.q1, cli.e1, cli.pe, [1,2])
-            
-        elif "2" == mensaje[3][1]:
-            seguir_jugando = jugador_generico(cli.s1, cli.q1, cli.e1, cli.pe, [2,1])
-        
-        else:
-            print("error-s8")
-
-
-def jugador_generico(sock, q1, e1, pe, orden):
-    while True:         #! Bucle de jugadas en una única partida.  
-        
-        for turno in orden:     #! orden = [1,2] o [2,1]
-            
-            if turno == 1:      #! Jugador 1 (Atacar).
-                while True:     #! Bucle de errores.
-                    msg1 = recibir_mensaje(sock)
-                            
-                    q1.put(msg1)     #* Pone el mensaje en la cola, ataque.
-                    
-                    pe.wait()       #* Espera al hilo partida a que llegue al punto de encuentro (que ya pueda leer q1).
-                    
-                    e1.wait()       #* Espera a que suceda el evento (procesar el disparo y poner los resultados en q1).
-                    e1.clear()
-                    
-                    msg2 = q1.get() #* Mensaje del resultado del disparo.
-                    
-                    enviar_mensaje(sock, msg2)
-                    
-                    if msg2[3][0]:          
-                        break   #! Sale del bucle de errores.
-                    
-                    elif not(msg2[3][0]):   #! Existe error. 
-                        pass        #! Se queda en el bucle de errores.
-            
-            elif turno == 2:    #! Jugador 2 (Recibir ataque).
-                msg2 = q1.get()     #! Se queda esperando a que pueda consumir la respuesta al ataque del jugador 2 de la cola.
-                enviar_mensaje(sock, msg2)
-
-            if msg2[3][1] == "FIN":     #! Terminó la partida.
-                msg1 = recibir_mensaje(sock)        #! Continuar o salir del usuario.
-                
-                q1.put(msg1)        #! Envía el mensaje del usuario al hilo fin_partida. 
-                pe.wait()           
-                
-                e1.wait()           #! El hilo fin_partida terminó de procesar el "continuar o salir".
-                e1.clear()
-                
-                if msg1 == "salir":
-                    return False       #! Sale del bucle de la partida y no busca una nueva partida.
-                
-                else:
-                    msg2 = q1.get()         #! Envía el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
-                    enviar_mensaje(sock, msg2)
-                    
-                    return True       #! Sale del bucle de la partida y busca una nueva.
-
-
 def argumentos():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, required=False, help="port", default=5000)
     parser.add_argument("-i4", type=str, required=False, help="IPv4", default=("localhost"))
     parser.add_argument("-i6", type=str, required=False, help="IPv6", default=("::1"))
 
-
-
     return parser.parse_args()
 
 
 def abrir_socket(args):
     port = args.p
-    # ipv4 = args.i4
-    # ipv6 = args.i6
-    
+
     try:
         ipv4 = socket.getaddrinfo(args.i4, args.p, socket.AF_INET, 1)[0][4][0]
         s4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -128,71 +43,16 @@ def abrir_socket(args):
     return s4, s6
 
 
-#* Hilo de para borrar clientes.
-#! Cerrar los socket del lado del server cuando el cliente cerró su app con ctrl + c.
-#? No funciona, al momento de hacer el select.select, este se hace con clientes_objeto vacío, por lo tanto nunca avanza.
-def borrar_cliente_forzado():
-    print("  Hilo 'Borrar cliente forzado' ID:", threading.get_native_id())
+#! [msg, tablero1, tablero2, estado]
+def enviar_mensaje(s, m):
+    # print("Mensaje enviado:",m)
+    s.send(pickle.dumps(m))
 
-    global clientes_objeto  
 
-    while True: 
-        legible, escribible, exceptional = select.select([cliente.s1 for cliente in clientes_objeto] , [], [cliente.s1 for cliente in clientes_objeto] )
-        
-        global lock
-        lock.acquire()
-        clientes_copia = clientes_objeto.copy()     #! Esto es porque había problemas al estar recorriendo una lista y a su vez modificandola.
-        for cliente in clientes_copia:      #! Cierra el socket y elimina al cliente de la lista de clientes
-            if cliente.s1 in exceptional:
-                print(f"Cerrando socket del cliente: {cliente.nickname}")
-                cliente.s1.close()
-                clientes_objeto.remove(cliente)
-        lock.release()
-
-#* Hilo de para aceptar clientes.
-def aceptar_cliente(server4, server6, p):
-    print("  Hilo 'Aceptar_cliente' ID:", threading.get_native_id())
-    
-    global clientes_objeto
-    lectura = []
-    if server4 != None:
-        lectura.append(server4)
-        
-    if server6 != None:
-        lectura.append(server6)
-    
-    escritura = []
-    excpecion = []
-    
-    j=1
-    while True:
-        
-        #! Permite esperar que un socket se habilite; en este caso, solo esperamos a que un socket se habilite para 
-        #! lectura, es decir, un cliente nos escribe y al server se le habilita la opción de lectura.
-        #! Devuelve los sockets de los clientes.
-        legible, escribible, exceptional = select.select(lectura, escritura, excpecion) 
-        
-        for s in legible:
-            if s == server4:
-                s2,addr = server4.accept()
-                
-            elif s == server6:
-                s2,addr = server6.accept()
-                
-            nickname = recibir_mensaje(s2)
-            print("-----------------------------------------------------------------")
-            print(f"  Nuevo cliente {j} {addr} : {nickname}")
-            
-            global lock
-            lock.acquire()
-            i = len(clientes_objeto)
-            clientes_objeto.append(C_Cliente(s2, addr, nickname))
-            threading.Thread(target=f_cliente, args=(clientes_objeto[i],), name=f"Cliente {j}").start()
-            lock.release()
-            
-            p.send(["conexion_jugador", nickname])       #! Envía a la BD el nickname, si no existe lo agrega. 
-            
-            j+=1
+def recibir_mensaje(s):
+    mensaje = s.recv(10000) 
+    # print("Mensaje recibido:", mensaje)
+    return pickle.loads(mensaje)
 
 
 def matriz_inicial():
@@ -304,6 +164,142 @@ def matriz_barco_random():
     return matriz
 
 
+#T* Hilo de para borrar clientes.
+#! Cerrar los socket del lado del server cuando el cliente cerró su app con ctrl + c.
+#? No funciona, al momento de hacer el select.select, este se hace con clientes_objeto vacío, por lo tanto nunca avanza.
+def borrar_cliente_forzado():
+    print("  Hilo 'Borrar cliente forzado' ID:", threading.get_native_id())
+
+    global clientes_objeto  
+
+    while True: 
+        legible, escribible, exceptional = select.select([cliente.s1 for cliente in clientes_objeto] , [], [cliente.s1 for cliente in clientes_objeto] )
+        
+        global lock
+        lock.acquire()
+        clientes_copia = clientes_objeto.copy()     #! Esto es porque había problemas al estar recorriendo una lista y a su vez modificandola.
+        for cliente in clientes_copia:      #! Cierra el socket y elimina al cliente de la lista de clientes
+            if cliente.s1 in exceptional:
+                print(f"Cerrando socket del cliente: {cliente.nickname}")
+                cliente.s1.close()
+                clientes_objeto.remove(cliente)
+        lock.release()
+
+#T* Hilo de para aceptar clientes.
+def aceptar_cliente(server4, server6, p):
+    print("  Hilo 'Aceptar_cliente' ID:", threading.get_native_id())
+    
+    global clientes_objeto
+    lectura = []
+    if server4 != None:
+        lectura.append(server4)
+        
+    if server6 != None:
+        lectura.append(server6)
+    
+    escritura = []
+    excpecion = []
+    
+    j=1
+    while True:
+        
+        #! Permite esperar que un socket se habilite; en este caso, solo esperamos a que un socket se habilite para 
+        #! lectura, es decir, un cliente nos escribe y al server se le habilita la opción de lectura.
+        #! Devuelve los sockets de los clientes.
+        legible, escribible, exceptional = select.select(lectura, escritura, excpecion) 
+        
+        for s in legible:
+            if s == server4:
+                s2,addr = server4.accept()
+                
+            elif s == server6:
+                s2,addr = server6.accept()
+                
+            nickname = recibir_mensaje(s2)
+            print("-----------------------------------------------------------------")
+            print(f"  Nuevo cliente {j} {addr} : {nickname}")
+            
+            global lock
+            lock.acquire()
+            i = len(clientes_objeto)
+            clientes_objeto.append(C_Cliente(s2, addr, nickname))
+            threading.Thread(target=f_cliente, args=(clientes_objeto[i],), name=f"Cliente {j}").start()
+            lock.release()
+            
+            p.send(["conexion_jugador", nickname])       #! Envía a la BD el nickname, si no existe lo agrega. 
+            
+            j+=1
+
+
+#T* Un hilo para cada uno de los clientes.
+def f_cliente(cli):   
+    print("  Hilo 'Conexión' ID:", threading.get_native_id())
+
+    seguir_jugando = True
+
+    while seguir_jugando:     #! Si el jugador busca una nueva partida. 
+        mensaje = cli.q1.get()
+        enviar_mensaje(cli.s1, mensaje)     #! Envía los tableros con barcos, sin disparos.
+            
+        if "1" == mensaje[3][1]: 
+            seguir_jugando = jugador_generico(cli.s1, cli.q1, cli.e1, cli.pe, [1,2])
+            
+        elif "2" == mensaje[3][1]:
+            seguir_jugando = jugador_generico(cli.s1, cli.q1, cli.e1, cli.pe, [2,1])
+        
+        else:
+            print("error-s8")
+
+
+def jugador_generico(sock, q1, e1, pe, orden):
+    while True:         #! Bucle de jugadas en una única partida.  
+        
+        for turno in orden:     #! orden = [1,2] o [2,1]
+            
+            if turno == 1:      #! Jugador 1 (Atacar).
+                while True:     #! Bucle de errores.
+                    msg1 = recibir_mensaje(sock)
+                    
+                    q1.put(msg1)     #* Pone el mensaje en la cola, ataque.
+                    
+                    pe.wait()       #* Espera al hilo partida a que llegue al punto de encuentro (que ya pueda leer q1).
+                    
+                    e1.wait()       #* Espera a que suceda el evento (procesar el disparo y poner los resultados en q1).
+                    e1.clear()
+                    
+                    msg2 = q1.get() #* Mensaje del resultado del disparo.
+                    
+                    enviar_mensaje(sock, msg2)
+                    
+                    if msg2[3][0]:          
+                        break   #! Sale del bucle de errores.
+                    
+                    elif not(msg2[3][0]):   #! Existe error. 
+                        pass        #! Se queda en el bucle de errores.
+            
+            elif turno == 2:    #! Jugador 2 (Recibir ataque).
+                msg2 = q1.get()     #! Se queda esperando a que pueda consumir la respuesta al ataque del jugador 2 de la cola.
+                enviar_mensaje(sock, msg2)
+
+            if msg2[3][1] == "FIN":     #! Terminó la partida.
+                msg1 = recibir_mensaje(sock)        #! Continuar o salir del usuario.
+                
+                q1.put(msg1)        #! Envía el mensaje del usuario al hilo fin_partida. 
+                pe.wait()           
+                
+                e1.wait()           #! El hilo fin_partida terminó de procesar el "continuar o salir".
+                e1.clear()
+                
+                if msg1 == "salir":
+                    return False       #! Sale del bucle de la partida y no busca una nueva partida.
+                
+                else:
+                    msg2 = q1.get()         #! Envía el estado de haber terminado la partida ( ['Buscando proxima partida...', ...).
+                    enviar_mensaje(sock, msg2)
+                    
+                    return True       #! Sale del bucle de la partida y busca una nueva.
+
+
 def turno(q_j, e_j, pe_j, tablero1, tablero2):
     pe_j.wait()         #! Espera a que el hilo jugador ponga el texto introducido por el usuario.
     
@@ -311,14 +307,14 @@ def turno(q_j, e_j, pe_j, tablero1, tablero2):
     
     msg2, tablero1, tablero2, estado = jugada(msg1, tablero1, tablero2)     #! Procesar el texto del primer jugador.
     
-    q_j.put([msg2, tablero1, tablero2, estado])     #! Enviar los resultados a los hilos jugadores.
+    q_j.put([msg2, tablero1, tablero2, estado])     #! Enviar los resultados al hilo del jugador del turno actual.
     
     e_j.set()       #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
     
     return msg2, tablero1, tablero2, estado
 
 
-#* Un hilo para cada partida (cada 2 jugadores).
+#T* Un hilo para cada partida (cada 2 jugadores).
 def partida(jugadores, p):
     print("  Hilo 'Partida' ID:", threading.get_native_id())
 
@@ -393,7 +389,7 @@ def partida(jugadores, p):
     threading.Thread(target=fin_partida, args=(j2,), name="Fin de partida del jugador 2").start()
 
 
-#* Hilo fin de la partida por cada jugador.
+#T* Hilo fin de la partida por cada jugador.
 #! Anuncia al ganador y pregunta al cliente si desean finalizar la conexión o jugar otra vez.
 def fin_partida(jugador):
     
@@ -430,7 +426,7 @@ def fin_partida(jugador):
         lock.release()
 
 
-#* Procesamiento del disparo
+#T* Procesamiento del disparo
 #! Tiene que devolver [mensaje, tablero1, tablero2, estado]     (Estado = [True/False, descripcion])
 #! Errores: s1=Valores no validos, s2=Valores fuera de rango, s3=Disparo ya realizado, 
 #! tablero = {disparos_enemigos:DataFrame , mis_barcos:DataFrame, cant_hundidos:Int}
@@ -523,7 +519,7 @@ def tipo_barco(letra):
         return "una Fragata"
 
 
-#* Proceso juego.
+#T* Proceso juego.
 def juego(server4, server6, p):
     print("  Proceso 'Juego' ID:", os.getpid())
     
@@ -585,7 +581,7 @@ def señal(nro_senial, marco):
     os._exit(0)
 
 
-#* Proceso de Base de datos.
+#T* Proceso de Base de datos.
 def base_datos(p):
     #* Bucle esperando recibir algo por pipe, depende lo que sea hace un read o un write en mongodb.
     print("  Proceso 'Base de datos' ID:", os.getpid())
@@ -626,42 +622,8 @@ def main():
 
     #! Proceso BD
     p_bd = multiprocessing.Process(target=base_datos, args=(p2, ), name="Base de datos").start()
-    
-    
-    
+
+
+
 if __name__ == '__main__':
     main()
-
-
-#TODO: En orden de prioridades.
-#// Creo que ya lo arreglé. AL momento de crear los barcos, estos pueden aparecer encimados. 
-
-#// Ver los TODO que tengo sueltos por ahi.
-
-#// Ver lo que falta en el archivo funcionalidad_entidad.txt
-
-#// Arreglar o borrar borrar_cliente_forzado.
-
-#// Al momento de finalizar una partida y volver a empezar otra (escribir continuar) los roles de los jugadores se mezclan (los 2 son jugador 1 o algo asi).
-
-#// Usar locks para las variables globales, si o si.
-
-#// Usar MongoBD con celery y en un proceso aparte comunicado por pipe.
-
-#// Cada usuario pueda poner su nickname personalizado.
-
-#// Condición de fin de la partida cuando se hunden todos los barcos, los clientes 
-#// deberían terminan pero no lo hacen, el server detecta bien la condición.
-
-#// Que vuelva a jugar el mismo jugador cuando el disparo es en un lugar que ya disparó. 
-
-#// Volver a dar el turno al jugador que se equivocó de coordinas (mal escritas). Esto deberia ser 
-#// por lado del server y no del cliente. Hay una solución propuesta desde el lado del cliente.
-
-#// Como cerramos las conexiones.
-
-#// Cambiar el diccionario cliente por una clase cliente.
-
-#// Ver si se puede con IPv4 y v6.
-
-#//  Ver como matar al proceso "online" cuando muere el main. Señal de ctrl + c para que también se la envíe al hijo. 
