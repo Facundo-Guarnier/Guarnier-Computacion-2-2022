@@ -1,7 +1,7 @@
 FROM redis
 
 #! Variables
-ENV p 5000
+# ENV p 5000
 
 
 #! Intalar MongoDB
@@ -73,7 +73,7 @@ RUN pip install celery[redis]
 # Puerto redis.
 EXPOSE 6379 
 # Puero server.
-EXPOSE $p
+EXPOSE 5000
 
 
 #! Ejecucion en paralelo de 2 o mas comandos.

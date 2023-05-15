@@ -43,6 +43,23 @@ def abrir_socket(args):
     return s4, s6
 
 
+def señal(nro_senial, marco):
+    print("Finalizando el proceso ID:", os.getpid())
+    global clientes_objeto
+    
+    global lock
+    lock.acquire()
+    for cliente in clientes_objeto:
+        try:
+            print(f"Cerrando socket del cliente: {cliente.nickname}")
+            cliente.s1.close()
+        except:
+            pass
+    lock.release()
+    
+    os._exit(0)
+
+
 #! [msg, tablero1, tablero2, estado]
 def enviar_mensaje(s, m):
     # print("Mensaje enviado:",m)
@@ -88,7 +105,7 @@ def matriz_barco_random():
                     derecha = False
                 
                 estado = True
-                for i in range(tamaño+1):
+                for i in range(tamaño+1):           #! Saber si ya hay un barco en esas posiciones 
                     if derecha:
                         if matriz.iloc[y, x_inicio+i] != " ":
                             estado = False
@@ -99,8 +116,8 @@ def matriz_barco_random():
                             estado = False
                             contador_error += 1
                             break
-                        
-                if estado and derecha:
+                
+                if estado and derecha:          #! Agregar barco. 
                     for i in range(tamaño+1):
                         matriz.iloc[y, x_inicio+i] = barco
                 elif estado and not(derecha):
@@ -131,7 +148,7 @@ def matriz_barco_random():
                     abajo = False
                     
                 estado = True
-                for i in range(tamaño+1):
+                for i in range(tamaño+1):           #! Saber si ya hay un barco en esas posiciones 
                     if abajo:
                         if matriz.iloc[y_inicio+i, x] != " ":
                             estado = False
@@ -143,7 +160,7 @@ def matriz_barco_random():
                             contador_error += 1
                             break
                         
-                if estado and abajo:
+                if estado and abajo:                #! Agregar barcos.
                     for i in range(tamaño+1):
                         matriz.iloc[y_inicio+i, x] = barco
                 elif estado and not(abajo):
@@ -173,17 +190,26 @@ def borrar_cliente_forzado():
     global clientes_objeto  
 
     while True: 
-        legible, escribible, exceptional = select.select([cliente.s1 for cliente in clientes_objeto] , [], [cliente.s1 for cliente in clientes_objeto] )
+        legible, escribible, exceptional = select.select(
+            # [cliente.s1 for cliente in clientes_objeto],
+            [], 
+            [], 
+            [cliente.s1 for cliente in clientes_objeto], 
+            2,
+        )
         
         global lock
         lock.acquire()
         clientes_copia = clientes_objeto.copy()     #! Esto es porque había problemas al estar recorriendo una lista y a su vez modificandola.
+        
         for cliente in clientes_copia:      #! Cierra el socket y elimina al cliente de la lista de clientes
             if cliente.s1 in exceptional:
-                print(f"Cerrando socket del cliente: {cliente.nickname}")
+                print(f"+++++++++++++++++++++++++ Cerrando socket del cliente: {cliente.nickname}")
                 cliente.s1.close()
                 clientes_objeto.remove(cliente)
         lock.release()
+        time.sleep(3)
+
 
 #T* Hilo de para aceptar clientes.
 def aceptar_cliente(server4, server6, p):
@@ -238,7 +264,7 @@ def f_cliente(cli):
     seguir_jugando = True
 
     while seguir_jugando:     #! Si el jugador busca una nueva partida. 
-        mensaje = cli.q1.get()
+        mensaje = cli.q1.get()          #! Se queda bloqueado esperando los tableros.
         enviar_mensaje(cli.s1, mensaje)     #! Envía los tableros con barcos, sin disparos.
             
         if "1" == mensaje[3][1]: 
@@ -260,7 +286,7 @@ def jugador_generico(sock, q1, e1, pe, orden):
                 while True:     #! Bucle de errores.
                     msg1 = recibir_mensaje(sock)
                     
-                    q1.put(msg1)     #* Pone el mensaje en la cola, ataque.
+                    q1.put(msg1)    #* Pone el mensaje en la cola, ataque.
                     
                     pe.wait()       #* Espera al hilo partida a que llegue al punto de encuentro (que ya pueda leer q1).
                     
@@ -298,20 +324,6 @@ def jugador_generico(sock, q1, e1, pe, orden):
                     enviar_mensaje(sock, msg2)
                     
                     return True       #! Sale del bucle de la partida y busca una nueva.
-
-
-def turno(q_j, e_j, pe_j, tablero1, tablero2):
-    pe_j.wait()         #! Espera a que el hilo jugador ponga el texto introducido por el usuario.
-    
-    msg1 = q_j.get()     #! Lee el texto de el usuario.
-    
-    msg2, tablero1, tablero2, estado = jugada(msg1, tablero1, tablero2)     #! Procesar el texto del primer jugador.
-    
-    q_j.put([msg2, tablero1, tablero2, estado])     #! Enviar los resultados al hilo del jugador del turno actual.
-    
-    e_j.set()       #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
-    
-    return msg2, tablero1, tablero2, estado
 
 
 #T* Un hilo para cada partida (cada 2 jugadores).
@@ -389,6 +401,20 @@ def partida(jugadores, p):
     threading.Thread(target=fin_partida, args=(j2,), name="Fin de partida del jugador 2").start()
 
 
+def turno(q_j, e_j, pe_j, tablero1, tablero2):
+    pe_j.wait()         #! Espera a que el hilo jugador ponga el texto introducido por el usuario.
+    
+    msg1 = q_j.get()     #! Lee el texto de el usuario.
+    
+    msg2, tablero1, tablero2, estado = jugada(msg1, tablero1, tablero2)     #! Procesar el texto del primer jugador.
+    
+    q_j.put([msg2, tablero1, tablero2, estado])     #! Enviar los resultados al hilo del jugador del turno actual.
+    
+    e_j.set()       #! Establece que ya terminó de procesar y de poner los elementos en la cola. 
+    
+    return msg2, tablero1, tablero2, estado
+
+
 #T* Hilo fin de la partida por cada jugador.
 #! Anuncia al ganador y pregunta al cliente si desean finalizar la conexión o jugar otra vez.
 def fin_partida(jugador):
@@ -428,7 +454,6 @@ def fin_partida(jugador):
 
 #T* Procesamiento del disparo
 #! Tiene que devolver [mensaje, tablero1, tablero2, estado]     (Estado = [True/False, descripcion])
-#! Errores: s1=Valores no validos, s2=Valores fuera de rango, s3=Disparo ya realizado, 
 #! tablero = {disparos_enemigos:DataFrame , mis_barcos:DataFrame, cant_hundidos:Int}
 def jugada(msg, tablero1, tablero2):
     
@@ -447,8 +472,7 @@ def jugada(msg, tablero1, tablero2):
     if (fila > 9 or fila < 0 or columna > 9 or columna < 0):
         return "Valores fuera de rango", tablero1, tablero2, [False, "error-s2"]
     
-
-
+    
     #* 2 - Revisar si ya se disparó en ese lugar (comprobar en disparos_enemigos en tablero 2).
     if tablero2["disparos_enemigos"].iloc[fila, columna] != " ":
         return "Disparo realizado con anterioridad", tablero1, tablero2, [False, "error-s3"]
@@ -463,8 +487,7 @@ def jugada(msg, tablero1, tablero2):
         tablero2["disparos_enemigos"].iloc[fila, columna] = "T"     #! Tocado
         
         #* 3.1 - Revisar si el barco está hundido. 
-        #! Barco hundido
-        #! Contar sobre el eje 'X' o sobre el eje 'Y' si hay x cantidad de tocados partiendo desde msg
+        #! Contar sobre el eje 'X' o sobre el eje 'Y' si hay x cantidad de tocados partiendo desde msg.
         if (es_hundido(fila, columna, tablero2)):
             tablero2["cant_hundidos"] = tablero2["cant_hundidos"] + 1
         
@@ -564,26 +587,9 @@ def juego(server4, server6, p):
             print(f"  Jugadores en espera: {len(jugadores_espera)}")
 
 
-def señal(nro_senial, marco):
-    print("Finalizando el proceso ID:", os.getpid())
-    global clientes_objeto
-    
-    global lock
-    lock.acquire()
-    for cliente in clientes_objeto:
-        try:
-            print(f"Cerrando socket del cliente: {cliente.nickname}")
-            cliente.s1.close()
-        except:
-            pass
-    lock.release()
-    
-    os._exit(0)
-
-
 #T* Proceso de Base de datos.
 def base_datos(p):
-    #* Bucle esperando recibir algo por pipe, depende lo que sea hace un read o un write en mongodb.
+    #* Bucle esperando recibir algo por pipe.
     print("  Proceso 'Base de datos' ID:", os.getpid())
     
     while True:
